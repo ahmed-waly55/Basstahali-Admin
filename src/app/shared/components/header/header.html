@@ -1,0 +1,80 @@
+<header class="h-18 px-4 md:px-6 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between sticky top-0 z-30 transition-all duration-300 shadow-xs" dir="rtl">
+
+  <!-- Right Section: Sidebar Toggle & Welcome Text -->
+  <div class="flex items-center gap-3">
+    <!-- زر التحكم بالسيدبار (يعمل على جميع الشاشات) -->
+    <button mat-icon-button (click)="toggleSidebar.emit()"
+            class="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-xl transition-all duration-200">
+      <mat-icon>{{ isSidebarOpen ? 'menu_open' : 'menu' }}</mat-icon>
+    </button>
+
+    <div class="hidden sm:flex flex-col text-right">
+      <h1 class="text-sm font-bold text-slate-800 tracking-tight">لوحة التحكم الرئيسية</h1>
+      <span class="text-xs text-slate-400 font-medium">مرحباً بك مجدداً، أحمد ✨</span>
+    </div>
+  </div>
+
+  <!-- Left Section: Actions & Profile -->
+  <div class="flex items-center gap-2 md:gap-3">
+
+    <!-- Notifications -->
+    <button mat-icon-button [matMenuTriggerFor]="notificationsMenu"
+            class="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-xl relative transition-all duration-200"
+            matTooltip="الإشعارات">
+      <mat-icon class="transition-transform hover:scale-110">notifications_none</mat-icon>
+      <span class="absolute top-2.5 left-2.5 w-2 h-2 bg-rose-500 rounded-full ring-4 ring-white animate-pulse"></span>
+    </button>
+
+    <mat-menu #notificationsMenu="matMenu" xPosition="after" class="mt-3 w-72 md:w-80 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-2">
+      <div class="px-3 py-2.5 border-b border-slate-50 flex justify-between items-center">
+        <span class="font-bold text-xs text-slate-700">التنبيهات والنشاطات</span>
+        <span class="text-[11px] text-indigo-600 font-semibold cursor-pointer hover:underline">تحديد الكل مقروء</span>
+      </div>
+      <div class="py-1">
+        <button mat-menu-item class="flex items-start gap-3 py-2.5 px-3 h-auto rounded-xl hover:bg-indigo-50/40 transition-colors">
+          <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+            <mat-icon class="text-sm">verified_user</mat-icon>
+          </div>
+          <div class="text-right">
+            <p class="text-xs font-semibold text-slate-700">تم اعتماد صلاحيات جديدة</p>
+            <span class="text-[11px] text-slate-400">منذ 10 دقائق</span>
+          </div>
+        </button>
+      </div>
+    </mat-menu>
+
+    <div class="h-5 w-[1px] bg-slate-100 mx-1"></div>
+
+    <!-- User Profile Button -->
+    <button class="flex items-center gap-2.5 pr-2 md:pr-3 pl-1.5 py-1.5 rounded-full bg-slate-50/80 hover:bg-indigo-600/10 border border-slate-100 transition-all duration-300 group" [matMenuTriggerFor]="userMenu">
+      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces"
+           alt="User Avatar"
+           class="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-xs">
+      <div class="hidden md:flex flex-col text-right">
+        <span class="text-xs font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">سارة أحمد</span>
+        <span class="text-[10px] text-slate-400 font-medium">مدير عام</span>
+      </div>
+      <mat-icon class="text-slate-400 text-sm hidden md:block">expand_more</mat-icon>
+    </button>
+
+    <mat-menu #userMenu="matMenu" xPosition="after" class="mt-3 w-60 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-2">
+      <div class="px-4 py-3 bg-slate-50/70 rounded-xl mb-1 text-right">
+        <p class="text-xs font-bold text-slate-800">سارة أحمد</p>
+        <p class="text-[11px] text-slate-400 truncate mt-0.5">sara.admin@example.com</p>
+      </div>
+
+      <button mat-menu-item class="flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 rounded-xl my-0.5 h-10">
+        <mat-icon class="text-base text-slate-400">person_outline</mat-icon>
+        <span class="text-xs font-medium">الملف الشخصي</span>
+      </button>
+
+      <div class="h-[1px] bg-slate-100 my-1"></div>
+
+      <button mat-menu-item class="flex items-center gap-2.5 text-rose-600 hover:bg-rose-50/60 rounded-xl my-0.5 h-10">
+        <mat-icon class="text-base text-rose-500">logout</mat-icon>
+        <span class="text-xs font-medium">تسجيل الخروج</span>
+      </button>
+    </mat-menu>
+
+  </div>
+</header>
