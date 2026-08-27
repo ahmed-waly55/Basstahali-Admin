@@ -1,3 +1,3 @@
 export const environment = {
-    baseUrl : "https://basstahali-api.runasp.net/"
+    baseUrl : "https://basstahali-api.runasp.net"
 };
