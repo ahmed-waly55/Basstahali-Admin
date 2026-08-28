@@ -1,0 +1,224 @@
+<div class="w-full min-h-screen p-6 md:p-10 bg-slate-50/60">
+
+  <!-- ترويسة الصفحة -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+    <div class="flex items-center gap-3.5">
+      <button mat-stroked-button matTooltip="الرجوع للخلف" class="!rounded-2xl !p-2.5 !min-w-0 !bg-white !border-slate-200 text-slate-600 hover:bg-slate-50 shadow-xs transition-all" (click)="goBack()">
+        <mat-icon class="text-xl">arrow_forward</mat-icon>
+      </button>
+
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">إدارة الطلاب</h1>
+        <p class="text-xs md:text-sm text-slate-500 mt-1">عرض ومتابعة بيانات الطلاب الأساسية بكل مريحة وسهولة</p>
+      </div>
+    </div>
+
+    <button mat-flat-button class="!bg-blue-600 !text-white !rounded-2xl !px-6 !py-3 flex items-center gap-2 shadow-lg shadow-blue-500/15 hover:!bg-blue-700 transition-all font-medium text-sm">
+      <mat-icon>add</mat-icon>
+      <span>إضافة طالب جديد</span>
+    </button>
+  </div>
+
+  <!-- شريط البحث الفوري -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm mb-6 flex items-center gap-3 w-full transition-all hover:border-slate-200">
+    <div class="relative flex-1">
+      <span class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-slate-400">
+        <mat-icon class="text-xl">search</mat-icon>
+      </span>
+      <input type="text"
+             [(ngModel)]="searchQuery"
+             (input)="applyFilter()"
+             placeholder="البحث السريع باسم الطالب أو رقم الهاتف..."
+             class="w-full pr-12 pl-4 py-2.5 rounded-xl border-0 text-sm focus:outline-none bg-transparent text-slate-800 placeholder:text-slate-400 font-medium">
+    </div>
+
+    @if (searchQuery) {
+      <button mat-stroked-button class="!rounded-xl !border-slate-200 !text-slate-500 text-xs !bg-slate-50 hover:!bg-slate-100 px-4" (click)="searchQuery = ''; applyFilter()">
+        إعادة ضبط
+      </button>
+    }
+  </div>
+
+  <!-- الجدول (أبيض ناصع، مسافات واسعة ومريحة للعين) -->
+  <div class="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden w-full">
+    <table mat-table [dataSource]="dataSource" class="w-full !bg-white">
+
+      <!-- عمود الطالب -->
+      <ng-container matColumnDef="fullName">
+        <th mat-header-cell *matHeaderCellDef class="!text-right !font-bold !text-slate-500 !bg-white !px-8 !py-5 !border-b !border-slate-100 text-xs tracking-wider"> الطالب </th>
+        <td mat-cell *matCellDef="let student" class="!px-8 !py-5 !bg-white !border-b !border-slate-50">
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-sm shrink-0">
+              {{ student.fullName.charAt(0) }}
+            </div>
+            <div>
+              <p class="font-bold text-slate-900 text-sm leading-relaxed">{{ student.fullName }}</p>
+              <p class="text-xs text-slate-400 font-normal">@{{ student.userName }}</p>
+            </div>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- عمود رقم الهاتف -->
+<!-- عمود رقم الهاتف -->
+      <ng-container matColumnDef="phoneNumber">
+        <th mat-header-cell *matHeaderCellDef class="!text-right !font-bold !text-slate-500 !bg-white !px-6 !py-5 !border-b !border-slate-100 text-xs tracking-wider"> رقم الهاتف </th>
+        <td mat-cell *matCellDef="let student" class="!px-6 !py-5 !bg-white !border-b !border-slate-50">
+          <div class="flex items-center justify-end" dir="ltr">
+            <span class="text-slate-600 font-normal text-sm tracking-wide">
+              {{ student.phoneNumber }}
+            </span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- عمود تاريخ الانتهاء -->
+      <ng-container matColumnDef="expirationDate">
+        <th mat-header-cell *matHeaderCellDef class="!text-right !font-bold !text-slate-500 !bg-white !px-6 !py-5 !border-b !border-slate-100 text-xs tracking-wider"> تاريخ الانتهاء </th>
+        <td mat-cell *matCellDef="let student" class="!px-6 !py-5 !bg-white !border-b !border-slate-50 text-slate-600 font-medium text-sm">
+          {{ student.expirationDate ? (student.expirationDate | date:'yyyy-MM-dd') : 'غير محدد' }}
+        </td>
+      </ng-container>
+
+      <!-- عمود الحالة -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef class="!text-right !font-bold !text-slate-500 !bg-white !px-6 !py-5 !border-b !border-slate-100 text-xs tracking-wider"> الحالة </th>
+        <td mat-cell *matCellDef="let student" class="!px-6 !py-5 !bg-white !border-b !border-slate-50">
+          @if (student.status === 'Active') {
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> نشط
+            </span>
+          } @else {
+            <span class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> غير نشط
+            </span>
+          }
+        </td>
+      </ng-container>
+
+      <!-- عمود العمليات -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="!text-center !font-bold !text-slate-500 !bg-white !px-6 !py-5 !border-b !border-slate-100 text-xs tracking-wider"> العمليات </th>
+        <td mat-cell *matCellDef="let student" class="!px-6 !py-5 !bg-white !border-b !border-slate-50 text-center">
+          <div class="flex items-center justify-center gap-2">
+            <!-- زر عرض المزيد (التفاصيل الكاملة) -->
+            <button mat-icon-button matTooltip="عرض التفاصيل الكاملة" class="!w-9 !h-9 !rounded-xl !bg-slate-50 hover:!bg-blue-50 text-slate-500 hover:text-blue-600 transition-all" (click)="openDetailsModal(student)">
+              <mat-icon class="text-lg">visibility</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="تعديل البيانات" class="!w-9 !h-9 !rounded-xl !bg-slate-50 hover:!bg-slate-100 text-slate-500 hover:text-slate-700 transition-all">
+              <mat-icon class="text-lg">edit</mat-icon>
+            </button>
+            <button mat-icon-button matTooltip="حذف الطالب" class="!w-9 !h-9 !rounded-xl !bg-slate-50 hover:!bg-rose-50 text-slate-400 hover:text-rose-600 transition-all" (click)="deleteStudent(student.id)">
+              <mat-icon class="text-lg">delete</mat-icon>
+            </button>
+          </div>
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-slate-50/50 transition-colors"></tr>
+    </table>
+
+    @if (dataSource.filteredData.length === 0) {
+      <div class="p-16 text-center w-full bg-white">
+        <div class="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 text-slate-300">
+          <mat-icon class="text-3xl">search_off</mat-icon>
+        </div>
+        <h3 class="text-sm font-bold text-slate-700">لا توجد نتائج مطابقة للبحث</h3>
+      </div>
+    }
+  </div>
+
+  <!-- مودال عرض باقي التفاصيل عند الضغط على زر العين -->
+  @if (isDetailsModalOpen && selectedStudent) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-xs p-4 animate-in fade-in"
+         (click)="closeDetailsModal()">
+
+      <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-8 border border-slate-100 max-h-[90vh] overflow-y-auto animate-in zoom-in-95"
+           (click)="$event.stopPropagation()">
+
+        <!-- ترويسة المودال -->
+        <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
+              {{ selectedStudent.fullName.charAt(0) }}
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-slate-900">{{ selectedStudent.fullName }}</h3>
+              <p class="text-xs text-slate-400">اسم المستخدم: @{{ selectedStudent.userName }}</p>
+            </div>
+          </div>
+          <button mat-icon-button class="!rounded-xl hover:!bg-slate-50 text-slate-400 hover:text-slate-600" (click)="closeDetailsModal()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <!-- محتوى التفاصيل الكاملة -->
+        <div class="space-y-5 text-sm">
+
+          <!-- بيانات ولي الأمر -->
+          <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-100/80">
+            <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-xs uppercase tracking-wider">
+              <mat-icon class="text-blue-600 text-base">family_restroom</mat-icon>
+              بيانات ولي الأمر والاتصال
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-600 text-xs">
+              <div><span class="text-slate-400 block mb-0.5">ولي الأمر:</span> <strong class="text-slate-800 text-sm">{{ selectedStudent.parentName }}</strong></div>
+              <div><span class="text-slate-400 block mb-0.5">هاتف ولي الأمر:</span> <strong class="text-slate-800 text-sm" dir="ltr">{{ selectedStudent.parentPhoneNumber }}</strong></div>
+              <div><span class="text-slate-400 block mb-0.5">هاتف الطالب:</span> <strong class="text-slate-800 text-sm" dir="ltr">{{ selectedStudent.phoneNumber }}</strong></div>
+            </div>
+          </div>
+
+          <!-- تفاصيل الحصص -->
+          <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-100/80">
+            <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-xs uppercase tracking-wider">
+              <mat-icon class="text-blue-600 text-base">event_available</mat-icon>
+              إحصائيات الحصص
+            </h4>
+            <div class="grid grid-cols-3 gap-3 text-center">
+              <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+                <span class="text-slate-400 block text-[11px] mb-1">الإجمالي</span>
+                <span class="font-bold text-slate-800 text-base">{{ selectedStudent.sessions.totalSessions }}</span>
+              </div>
+              <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+                <span class="text-slate-400 block text-[11px] mb-1">المستخدمة</span>
+                <span class="font-bold text-amber-600 text-base">{{ selectedStudent.sessions.usedSessions }}</span>
+              </div>
+              <div class="bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+                <span class="text-slate-400 block text-[11px] mb-1">المتبقية</span>
+                <span class="font-bold text-emerald-600 text-base">{{ selectedStudent.sessions.remainingSessions }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- المعلمين والمادة -->
+          <div class="bg-slate-50/70 p-4 rounded-2xl border border-slate-100/80">
+            <h4 class="font-bold text-slate-800 mb-3 flex items-center gap-2 text-xs uppercase tracking-wider">
+              <mat-icon class="text-blue-600 text-base">school</mat-icon>
+              المعلمون والمواد المسندة
+            </h4>
+            <div class="space-y-2">
+              @for (teacher of selectedStudent.teacherAssignments; track teacher.teacherId) {
+                <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 text-xs shadow-2xs">
+                  <span class="font-bold text-slate-800">{{ teacher.teacherName }}</span>
+                  <span class="px-3 py-1 rounded-lg bg-blue-50 text-blue-600 font-bold">
+                    {{ teacher.sessionPrice }} {{ teacher.currency }}
+                  </span>
+                </div>
+              } @empty {
+                <p class="text-xs text-slate-400 text-center py-2">لا يوجد معلمين معينين</p>
+              }
+            </div>
+          </div>
+
+        </div>
+
+        <div class="flex items-center justify-end mt-6 pt-4 border-t border-slate-100">
+          <button mat-flat-button class="!bg-slate-900 !text-white !rounded-xl !px-6 !py-2.5 !font-medium text-xs" (click)="closeDetailsModal()">إغلاق</button>
+        </div>
+
+      </div>
+    </div>
+  }
+
+</div>

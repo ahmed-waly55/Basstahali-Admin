@@ -32,7 +32,7 @@ export class Sidebar {
     {
       title: 'القائمة الرئيسية',
       items: [
-        { label: 'لوحة التحكم', route: '/dashboard', icon: 'dashboard' },
+        { label: 'الرئيسية', route: '/home', icon: 'dashboard' },
         { label: 'المستخدمين والصلاحيات', route: '/users', icon: 'group' },
         { label: 'التقارير والإحصائيات', route: '/analytics', icon: 'analytics' }
       ]

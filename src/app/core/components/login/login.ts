@@ -50,6 +50,8 @@ export class Login {
         });
         localStorage.setItem("token", response.data.accessToken)
         localStorage.setItem("user", response.data.user.fullName)
+        localStorage.setItem("refreshToken", response.data.refreshToken)
+
 
       },
       error: (err) => {
