@@ -1,1 +1,109 @@
-<p>teacher works!</p>
+<div class="p-6 max-w-6xl mx-auto font-sans" dir="rtl">
+
+  <!-- رأس الصفحة وزر إضافة مدرس جديد -->
+  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-3xl shadow-xs border border-slate-200/80">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 tracking-tight">إدارة المدرسين</h1>
+      <p class="text-sm text-slate-500 mt-1">عرض ومتابعة المدرسين مع خيارات التعديل، الحذف، وعرض التفاصيل</p>
+    </div>
+
+    <!-- زر إضافة مدرس جديد -->
+    <button
+      (click)="openAddModal()"
+      class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold px-5 py-2.5 rounded-2xl transition duration-200 flex items-center gap-2 shadow-lg shadow-indigo-100 cursor-pointer">
+      <i class="fa-solid fa-chalkboard-user text-sm"></i>
+      إضافة مدرس جديد
+    </button>
+  </div>
+
+  <!-- جدول عرض البيانات (تصميم Tailwind بالكامل) -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+
+    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+      <h3 class="font-black text-lg text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-users-rectangle text-indigo-600"></i> قائمة المدرسين
+      </h3>
+      <span class="text-xs bg-indigo-50 text-indigo-600 font-bold px-3 py-1.5 rounded-xl">
+        الإجمالي: {{ dataSource.data.length }}
+      </span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-right border-collapse">
+        <!-- ترويسة الجدول -->
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold text-xs">
+            <th class="py-4 px-6">الاسم</th>
+            <th class="py-4 px-6">التليفون</th>
+            <th class="py-4 px-6 text-center">
+              <span class="inline-flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-indigo-500"></i> الإجراءات
+              </span>
+            </th>
+          </tr>
+        </thead>
+
+        <!-- جسم الجدول -->
+        <tbody class="divide-y divide-slate-100 text-sm">
+          @for (element of dataSource.data; track element.id) {
+            <tr class="hover:bg-slate-50/50 transition">
+
+              <!-- خانة الاسم -->
+              <td class="py-4 px-6 font-bold text-slate-900">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs">
+                    {{ element.fullName?.charAt(0) || 'T' }}
+                  </div>
+                  {{ element.fullName }}
+                </div>
+              </td>
+
+              <!-- خانة التليفون -->
+              <td class="py-4 px-6 text-slate-600" dir="ltr">
+                <span class="text-right inline-block">{{ element.phoneNumber }}</span>
+              </td>
+
+              <!-- خانة الإجراءات (عرض المزيد + تعديل + حذف) -->
+              <td class="py-4 px-6 text-center">
+                <div class="flex items-center justify-center gap-2">
+
+                  <!-- زر عرض المزيد -->
+                  <button (click)="viewDetails(element)"
+                    class="h-10 px-3.5 rounded-2xl bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all duration-200 inline-flex items-center gap-1.5 font-bold text-xs shadow-sm cursor-pointer" title="عرض المزيد">
+                    <i class="fa-solid fa-eye text-sm"></i>
+                    <span>عرض المزيد</span>
+                  </button>
+
+                  <!-- زر التعديل -->
+                  <button (click)="editTeacher(element)"
+                    class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white transition-all duration-200 inline-flex items-center justify-center shadow-sm cursor-pointer" title="تعديل">
+                    <i class="fa-solid fa-pen-to-square text-base"></i>
+                  </button>
+
+                  <!-- زر الحذف -->
+                  <button (click)="deleteTeacher(element.id)"
+                    class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white transition-all duration-200 inline-flex items-center justify-center shadow-sm cursor-pointer" title="حذف">
+                    <i class="fa-solid fa-trash-can text-base"></i>
+                  </button>
+
+                </div>
+              </td>
+
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="text-center py-8 text-slate-400 font-medium">
+                <i class="fa-solid fa-triangle-exclamation mb-1 text-lg block"></i>
+                لا توجد بيانات متاحة للمدرسين حالياً
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginator الخاص بـ Angular Material -->
+    <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons class="!bg-transparent border-t border-slate-100 dir-ltr text-right"></mat-paginator>
+  </div>
+
+</div>

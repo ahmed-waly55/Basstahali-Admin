@@ -1,1 +1,283 @@
-<p>moderator works!</p>
+<div class="p-6 max-w-6xl mx-auto font-sans" dir="rtl">
+
+  <!-- رأس الصفحة وزر إضافة مستخدم جديد -->
+  <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 bg-white p-6 rounded-3xl shadow-xs border border-slate-200/80">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 tracking-tight">إدارة المشرفين</h1>
+      <p class="text-sm text-slate-500 mt-1">عرض ومتابعة المشرفين مع خيارات التعديل والحذف</p>
+    </div>
+
+    <!-- زر فتح مودال الإضافة -->
+    <button
+      type="button"
+      (click)="openAddModal()"
+      class="bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold px-5 py-2.5 rounded-2xl transition duration-200 flex items-center gap-2 shadow-lg shadow-indigo-100 cursor-pointer">
+      <i class="fa-solid fa-user-plus text-sm pointer-events-none"></i>
+      إضافة مستخدم جديد
+    </button>
+  </div>
+
+  <!-- جدول عرض البيانات -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
+
+    <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+      <h3 class="font-black text-lg text-slate-900 flex items-center gap-2">
+        <i class="fa-solid fa-shield-halved text-indigo-600"></i> قائمة المشرفين
+      </h3>
+      <span class="text-xs bg-indigo-50 text-indigo-600 font-bold px-3 py-1.5 rounded-xl">
+        الإجمالي: {{ dataSource.data.length }}
+      </span>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-right border-collapse">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold text-xs">
+            <th class="py-4 px-6">الاسم</th>
+            <th class="py-4 px-6">التليفون</th>
+            <th class="py-4 px-6 text-center">
+              <span class="inline-flex items-center gap-1.5">
+                <i class="fa-solid fa-sliders text-indigo-500"></i> الإجراءات
+              </span>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-100 text-sm">
+          @for (element of dataSource.data; track element.id) {
+            <tr class="hover:bg-slate-50/50 transition">
+              <td class="py-4 px-6 font-bold text-slate-900">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs">
+                    {{ element.fullName?.charAt(0) || 'M' }}
+                  </div>
+                  {{ element.fullName }}
+                </div>
+              </td>
+
+              <td class="py-4 px-6 text-slate-600" dir="ltr">
+                <span class="text-right inline-block">{{ element.phoneNumber }}</span>
+              </td>
+
+              <td class="py-4 px-6 text-center">
+                <div class="flex items-center justify-center gap-2">
+                  <!-- زر التعديل -->
+                  <button type="button" (click)="openEditModal(element)"
+                    class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 hover:bg-amber-500 hover:text-white transition-all duration-200 inline-flex items-center justify-center shadow-sm cursor-pointer" title="تعديل">
+                    <i class="fa-solid fa-pen-to-square text-base pointer-events-none"></i>
+                  </button>
+
+                  <!-- زر الحذف -->
+                  <button type="button" (click)="deleteModerator(element.id)"
+                    class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white transition-all duration-200 inline-flex items-center justify-center shadow-sm cursor-pointer" title="حذف">
+                    <i class="fa-solid fa-trash-can text-base pointer-events-none"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="3" class="text-center py-8 text-slate-400 font-medium">
+                <i class="fa-solid fa-triangle-exclamation mb-1 text-lg block"></i>
+                لا توجد بيانات متاحة حالياً
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons class="!bg-transparent border-t border-slate-100 dir-ltr text-right"></mat-paginator>
+  </div>
+
+  <!-- ================= Modal إضافة مستخدم جديد ================= -->
+  @if (isAddModalOpen) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 overflow-y-auto animate-fade-in">
+      <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200/80 my-8">
+
+        <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+          <h2 class="text-xl font-black text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-user-plus text-indigo-600 pointer-events-none"></i>
+            إضافة مستخدم جديد
+          </h2>
+          <button type="button" (click)="closeAddModal()" class="text-slate-400 hover:text-slate-600 p-1 cursor-pointer">
+            <i class="fa-solid fa-xmark text-lg pointer-events-none"></i>
+          </button>
+        </div>
+
+        <form [formGroup]="addForm" (ngSubmit)="submitAdd()" class="space-y-4">
+          <mat-form-field appearance="outline" class="w-full custom-mat-field">
+            <mat-label>اسم المستخدم (UserName)</mat-label>
+            <input matInput formControlName="userName" placeholder="أدخل اسم المستخدم" required />
+            <mat-icon matSuffix>account_circle</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full custom-mat-field">
+            <mat-label>الاسم الكامل (FullName)</mat-label>
+            <input matInput formControlName="fullName" placeholder="الاسم الثلاثي" required />
+            <mat-icon matSuffix>badge</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full custom-mat-field">
+            <mat-label>رقم الهاتف (PhoneNumber)</mat-label>
+            <input matInput formControlName="phoneNumber" placeholder="010xxxxxxxx" required />
+            <mat-icon matSuffix>phone</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full custom-mat-field">
+            <mat-label>كلمة المرور (Password)</mat-label>
+            <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" placeholder="أدخل كلمة المرور" required />
+            <button mat-icon-button matSuffix (click)="hidePassword = !hidePassword" type="button">
+              <mat-icon>{{hidePassword ? 'visibility_off' : 'visibility'}}</mat-icon>
+            </button>
+          </mat-form-field>
+
+          <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+            <button type="button" (click)="closeAddModal()"
+              class="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-2xl transition cursor-pointer">
+              إلغاء
+            </button>
+            <button type="submit" [disabled]="addForm.invalid || isLoading"
+              class="px-6 py-2.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100 active:scale-95 disabled:opacity-50 text-white rounded-2xl shadow-lg transition cursor-pointer flex items-center gap-2">
+              @if (isLoading) {
+                <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+              }
+              حفظ المستخدم
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  }
+
+  <!-- ================= Modal تعديل بيانات المستخدم (Tailwind Custom) ================= -->
+  @if (isEditModalOpen) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto animate-fade-in">
+      <div class="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-200/80 my-8 transform transition-all">
+
+        <!-- رأس الموديل -->
+        <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
+              <i class="fa-solid fa-pen-to-square text-base pointer-events-none"></i>
+            </div>
+            <div>
+              <h2 class="text-xl font-black text-slate-900 tracking-tight">تعديل بيانات المستخدم</h2>
+              <p class="text-xs text-slate-500 mt-0.5">قم بتحديث الحقول المطلوبة وحفظ التغييرات</p>
+            </div>
+          </div>
+          <button type="button" (click)="closeEditModal()" class="w-9 h-9 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 flex items-center justify-center transition cursor-pointer">
+            <i class="fa-solid fa-xmark text-base pointer-events-none"></i>
+          </button>
+        </div>
+
+        <!-- نموذج التعديل (Tailwind Form) -->
+        <form [formGroup]="editForm" (ngSubmit)="submitEdit()" class="space-y-4">
+
+          <!-- حقل اسم المستخدم -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">اسم المستخدم (UserName)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                <i class="fa-solid fa-at text-sm"></i>
+              </span>
+              <input
+                type="text"
+                formControlName="userName"
+                placeholder="أدخل اسم المستخدم"
+                class="w-full pr-10 pl-4 py-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+              />
+            </div>
+            @if (editForm.get('userName')?.invalid && editForm.get('userName')?.touched) {
+              <span class="text-xs text-rose-500 mt-1 block">اسم المستخدم مطلوب</span>
+            }
+          </div>
+
+          <!-- حقل الاسم الكامل -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">الاسم الكامل (FullName)</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                <i class="fa-solid fa-user text-sm"></i>
+              </span>
+              <input
+                type="text"
+                formControlName="fullName"
+                placeholder="الاسم الثلاثي"
+                class="w-full pr-10 pl-4 py-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+              />
+            </div>
+            @if (editForm.get('fullName')?.invalid && editForm.get('fullName')?.touched) {
+              <span class="text-xs text-rose-500 mt-1 block">الاسم الكامل مطلوب</span>
+            }
+          </div>
+
+          <!-- حقل رقم الهاتف -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">رقم الهاتف (PhoneNumber)</label>
+            <div class="relative" dir="ltr">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-slate-400">
+                <i class="fa-solid fa-phone text-sm"></i>
+              </span>
+              <input
+                type="text"
+                formControlName="phoneNumber"
+                placeholder="010xxxxxxxx"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-sm text-slate-800 placeholder-slate-400 text-right focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+              />
+            </div>
+            @if (editForm.get('phoneNumber')?.invalid && editForm.get('phoneNumber')?.touched) {
+              <span class="text-xs text-rose-500 mt-1 block text-right">رقم الهاتف مطلوب</span>
+            }
+          </div>
+
+          <!-- حقل كلمة المرور الجديدة (اختياري) -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">كلمة المرور الجديدة <span class="text-slate-400 font-normal">(اختياري)</span></label>
+            <div class="relative">
+              <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                <i class="fa-solid fa-lock text-sm"></i>
+              </span>
+              <input
+                [type]="hidePassword ? 'password' : 'text'"
+                formControlName="password"
+                placeholder="اتركها فارغة إذا لم ترغب في تغييرها"
+                class="w-full pr-10 pl-11 py-3 bg-slate-50/50 border border-slate-200 rounded-2xl text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"
+              />
+              <button
+                type="button"
+                (click)="hidePassword = !hidePassword"
+                class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 hover:text-slate-600 transition cursor-pointer">
+                <i class="fa-solid {{ hidePassword ? 'fa-eye-slash' : 'fa-eye' }} text-sm pointer-events-none"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- أزرار الإجراءات -->
+          <div class="flex items-center justify-end gap-3 pt-5 border-t border-slate-100 mt-6">
+            <button
+              type="button"
+              (click)="closeEditModal()"
+              class="px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-2xl transition cursor-pointer">
+              إلغاء
+            </button>
+            <button
+              type="submit"
+              [disabled]="editForm.invalid || isLoading"
+              class="px-6 py-2.5 text-xs font-bold bg-amber-600 hover:bg-amber-700 active:scale-95 disabled:opacity-50 text-white rounded-2xl shadow-lg shadow-amber-100 transition cursor-pointer flex items-center gap-2">
+              @if (isLoading) {
+                <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+              }
+              <i class="fa-solid fa-check text-xs pointer-events-none"></i>
+              حفظ التعديلات
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+  }
+
+</div>
