@@ -20,4 +20,7 @@ import { MatDividerModule } from '@angular/material/divider';
 export class Header {
   @Input() isSidebarOpen = true;
   @Output() toggleSidebar = new EventEmitter<void>();
+
+
+  userName: string | null = localStorage.getItem('user');
 }
