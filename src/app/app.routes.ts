@@ -15,8 +15,12 @@ export const routes: Routes = [
         { path: "reports", loadComponent: () => import("./features/users-component/pages/analytics/analytics").then(m => m.Analytics) }
 
         ]
-      }
+      },
+      {path:"analytics", loadComponent:()=> import("./features/analytics/analytics").then( m => m.Analytics), title: "لوحة التحكم | التقارير والاحصائيات"}
     ]
+
 },
+
+
   {path:"login", canActivate:[guestGuard] , loadComponent:()=> import("./core/components/login/login").then(m => m.Login), title:"تسجيل الدخول"}
 ];

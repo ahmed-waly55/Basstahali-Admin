@@ -9,7 +9,6 @@ import { environment } from '../../../environments/environment';
 export class Account {
 
   private http = inject(HttpClient);
-  private baseUrl = environment.baseUrl;
 
   // دالة مساعدة لإنشاء الهيدر وجلب التوكن من الـ localStorage
   private getAuthHeaders(): HttpHeaders {
@@ -23,17 +22,17 @@ export class Account {
 
   // جلب كل المشرفين
   getModerators(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/v1/moderators`, { headers: this.getAuthHeaders() });
+    return this.http.get(`${environment.baseUrl}/api/v1/moderators`, { headers: this.getAuthHeaders() });
   }
 
   // إضافة مشرف جديد
   createModerator(payload: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/api/v1/moderators`, payload, { headers: this.getAuthHeaders() });
+    return this.http.post(`${environment.baseUrl}/api/v1/moderators`, payload, { headers: this.getAuthHeaders() });
   }
 
   // حذف مشرف
   deleteModerator(id: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/api/v1/moderators/${id}`, { headers: this.getAuthHeaders() });
+    return this.http.delete(`${environment.baseUrl}/api/v1/moderators/${id}`, { headers: this.getAuthHeaders() });
   }
 
 
@@ -41,37 +40,37 @@ export class Account {
 
   // جلب كل المدرسين
   getTeachers(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/v1/teachers`, { headers: this.getAuthHeaders() });
+    return this.http.get(`${environment.baseUrl}/api/v1/teachers`, { headers: this.getAuthHeaders() });
   }
 
   // إضافة مدرس جديد
   createTeacher(payload: any): Observable<any> {
-    return this.http.post(`${this.baseUrl}/api/v1/teachers`, payload, { headers: this.getAuthHeaders() });
+    return this.http.post(`${environment.baseUrl}/api/v1/teachers`, payload, { headers: this.getAuthHeaders() });
   }
 
   // جلب مدرس برقم المعرف (id)
   getTeacherById(id: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/v1/teachers/${id}`, { headers: this.getAuthHeaders() });
+    return this.http.get(`${environment.baseUrl}/api/v1/teachers/${id}`, { headers: this.getAuthHeaders() });
   }
 
   // تعديل بيانات مدرس
   updateTeacher(id: string, payload: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/api/v1/teachers/${id}`, payload, { headers: this.getAuthHeaders() });
+    return this.http.put(`${environment.baseUrl}/api/v1/teachers/${id}`, payload, { headers: this.getAuthHeaders() });
   }
 
   // حذف مدرس
   deleteTeacher(id: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/api/v1/teachers/${id}`, { headers: this.getAuthHeaders() });
+    return this.http.delete(`${environment.baseUrl}/api/v1/teachers/${id}`, { headers: this.getAuthHeaders() });
   }
 
   // استرجاع مدرس محذوف (Restore)
   restoreTeacher(id: string): Observable<any> {
-    return this.http.post(`${this.baseUrl}/api/v1/teachers/${id}/restore`, {}, { headers: this.getAuthHeaders() });
+    return this.http.post(`${environment.baseUrl}/api/v1/teachers/${id}/restore`, {}, { headers: this.getAuthHeaders() });
   }
 
   // جلب السجلات المؤرشفة للمدرسين (Archived Records)
   getArchivedTeachers(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/api/v1/archived-records/teachers`, { headers: this.getAuthHeaders() });
+    return this.http.get(`${environment.baseUrl}/api/v1/archived-records/teachers`, { headers: this.getAuthHeaders() });
   }
 
 }

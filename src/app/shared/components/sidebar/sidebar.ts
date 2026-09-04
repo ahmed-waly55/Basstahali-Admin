@@ -45,4 +45,11 @@ export class Sidebar {
       ]
     }
   ];
+
+
+
+  logout(){
+    localStorage.clear();
+    window.location.href = '/login';
+  }
 }

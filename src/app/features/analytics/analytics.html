@@ -1,0 +1,248 @@
+<div class="p-6 space-y-6 bg-gray-50 min-h-screen font-sans" dir="rtl">
+
+  <!-- Page Header -->
+  <div class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">لوحة التحليلات المالية</h1>
+      <p class="text-sm text-gray-500 mt-1">متابعة الإيرادات، المصروفات، وأداء الحركات المالية للطلاب لحظياً</p>
+    </div>
+    <button mat-flat-button color="primary" class="!rounded-xl !px-6 !py-2 flex items-center gap-2">
+      <mat-icon>download</mat-icon>
+      تصدير التقرير
+    </button>
+  </div>
+
+  <!-- Analytics KPI Cards Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <!-- Revenue Card -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-sm font-medium text-gray-500">إجمالي الإيرادات</p>
+          <h3 class="text-3xl font-bold text-gray-900 mt-2">
+            {{ revenue?.currentValue | number:'1.2-2' }} <span class="text-sm font-normal text-gray-500">{{ revenue?.currency }}</span>
+          </h3>
+        </div>
+        <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+          <mat-icon>trending_up</mat-icon>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center gap-2" *ngIf="revenue?.growthPercentage !== undefined">
+        <span [ngClass]="revenue.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
+              class="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+          <mat-icon class="!text-sm !w-4 !h-4">{{ revenue.growthPercentage >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+          {{ revenue.growthPercentage }}%
+        </span>
+        <span class="text-xs text-gray-400">مقارنة بالفترة السابقة</span>
+      </div>
+    </div>
+
+    <!-- Total Costs Card -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-sm font-medium text-gray-500">إجمالي المصروفات</p>
+          <h3 class="text-3xl font-bold text-gray-900 mt-2">
+            {{ costs?.totalCosts?.currentValue | number:'1.2-2' }} <span class="text-sm font-normal text-gray-500">{{ costs?.totalCosts?.currency }}</span>
+          </h3>
+        </div>
+        <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
+          <mat-icon>trending_down</mat-icon>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center gap-2" *ngIf="costs?.totalCosts?.growthPercentage !== undefined">
+        <span [ngClass]="costs.totalCosts.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
+              class="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+          {{ costs.totalCosts.growthPercentage }}%
+        </span>
+        <span class="text-xs text-gray-400">مرتبات المعلمين والمصروفات</span>
+      </div>
+    </div>
+
+    <!-- Net Profit Card -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-sm font-medium text-gray-500">صافي الربح</p>
+          <h3 class="text-3xl font-bold text-gray-900 mt-2">
+            {{ netProfit?.currentValue | number:'1.2-2' }} <span class="text-sm font-normal text-gray-500">{{ netProfit?.currency }}</span>
+          </h3>
+        </div>
+        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+          <mat-icon>account_balance_wallet</mat-icon>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center gap-2" *ngIf="netProfit?.growthPercentage !== undefined">
+        <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
+          +{{ netProfit.growthPercentage }}%
+        </span>
+        <span class="text-xs text-gray-400">النمو الصافي للربح</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tables Section using Angular Material Tabs -->
+  <mat-tab-group animationDuration="0ms" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+
+    <!-- Tab 1: Financial Transactions -->
+    <mat-tab label="الحركات المالية العامة">
+      <div class="overflow-x-auto mt-4">
+        <table mat-table [dataSource]="transactions" class="w-full">
+
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">نوع الحركة</th>
+            <td mat-cell *matCellDef="let element" class="py-3">
+              <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-lg text-xs font-medium">{{ element.type }}</span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">المبلغ</th>
+            <td mat-cell *matCellDef="let element" class="font-semibold text-gray-900">
+              {{ element.amount | number:'1.2-2' }} EGP
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="direction">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">الاتجاه</th>
+            <td mat-cell *matCellDef="let element">
+              <span [ngClass]="element.direction === 'Credit' ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
+                    class="px-2.5 py-1 rounded-md text-xs font-bold">
+                {{ element.direction === 'Credit' ? 'إيداع (Credit)' : 'سحب (Debit)' }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="description">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">الوصف</th>
+            <td mat-cell *matCellDef="let element" class="text-gray-600 text-sm max-w-xs truncate">
+              {{ element.description }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="createdAt">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">التاريخ والوقت</th>
+            <td mat-cell *matCellDef="let element" class="text-gray-500 text-xs">
+              {{ element.createdAt | date:'yyyy-MM-dd HH:mm' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsTransactions"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsTransactions;" class="hover:bg-gray-50 transition-colors"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- Tab 2: Student Payments -->
+    <mat-tab label="مدفوعات الطلاب">
+      <div class="overflow-x-auto mt-4">
+        <table mat-table [dataSource]="studentPayments" class="w-full">
+
+          <ng-container matColumnDef="studentName">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">اسم الطالب</th>
+            <td mat-cell *matCellDef="let element" class="font-medium text-gray-900 py-3">
+              {{ element.studentName }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">المبلغ المدفوع</th>
+            <td mat-cell *matCellDef="let element" class="font-bold text-emerald-600">
+              {{ element.amount | number:'1.2-2' }} {{ element.currency }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="paymentMethod">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">طريقة الدفع</th>
+            <td mat-cell *matCellDef="let element">
+              <span class="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-semibold">
+                {{ element.paymentMethod }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">الحالة</th>
+            <td mat-cell *matCellDef="let element">
+              <span [ngClass]="{
+                'bg-emerald-50 text-emerald-700': element.status === 'Paid' || element.status === 'CoursePaid',
+                'bg-rose-50 text-rose-700': element.status === 'Cancelled'
+              }" class="px-2.5 py-1 rounded-md text-xs font-bold">
+                {{ element.status }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="recordedByName">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">مسجل بواسطة</th>
+            <td mat-cell *matCellDef="let element" class="text-gray-600 text-sm">
+              {{ element.recordedByName }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="paidAt">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">تاريخ الدفع</th>
+            <td mat-cell *matCellDef="let element" class="text-gray-500 text-xs">
+              {{ element.paidAt | date:'yyyy-MM-dd HH:mm' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsPayments"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsPayments;" class="hover:bg-gray-50 transition-colors"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- Tab 3: Student Profitability Analysis -->
+    <mat-tab label="تحليل ربحية الطلاب">
+      <div class="overflow-x-auto mt-4">
+        <table mat-table [dataSource]="studentProfitability" class="w-full">
+
+          <ng-container matColumnDef="studentName">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">اسم الطالب</th>
+            <td mat-cell *matCellDef="let element" class="font-medium text-gray-900 py-3">
+              {{ element.studentName || 'غير متوفر' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="totalPaid">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">إجمالي المدفوع</th>
+            <td mat-cell *matCellDef="let element" class="font-semibold text-emerald-600">
+              {{ element.totalPaid | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="totalCost">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">إجمالي التكلفة</th>
+            <td mat-cell *matCellDef="let element" class="font-semibold text-rose-600">
+              {{ element.totalCost | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="netProfit">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">صافي الربح</th>
+            <td mat-cell *matCellDef="let element" class="font-bold text-blue-600">
+              {{ element.netProfit | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="profitMargin">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">هامش الربح</th>
+            <td mat-cell *matCellDef="let element">
+              <span class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold">
+                {{ element.profitMargin }}%
+              </span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsProfitability"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsProfitability;" class="hover:bg-gray-50 transition-colors"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+
+</div>
