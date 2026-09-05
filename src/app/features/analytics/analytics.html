@@ -6,7 +6,7 @@
       <h1 class="text-2xl font-bold text-gray-800">لوحة التحليلات المالية</h1>
       <p class="text-sm text-gray-500 mt-1">متابعة الإيرادات، المصروفات، وأداء الحركات المالية للطلاب لحظياً</p>
     </div>
-    <button mat-flat-button color="primary" class="!rounded-xl !px-6 !py-2 flex items-center gap-2">
+    <button mat-flat-button color="primary" (click)="exportToExcel()" class="!rounded-xl !px-6 !py-2 flex items-center gap-2 cursor-pointer">
       <mat-icon>download</mat-icon>
       تصدير التقرير
     </button>
@@ -22,20 +22,24 @@
           <p class="text-sm font-medium text-gray-500">إجمالي الإيرادات</p>
           <h3 class="text-3xl font-bold text-gray-900 mt-2">
             {{ revenue?.currentValue | number:'1.2-2' }} <span class="text-sm font-normal text-gray-500">{{ revenue?.currency }}</span>
+
           </h3>
         </div>
         <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
           <mat-icon>trending_up</mat-icon>
         </div>
       </div>
-      <div class="mt-4 flex items-center gap-2" *ngIf="revenue?.growthPercentage !== undefined">
-        <span [ngClass]="revenue.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
-              class="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
-          <mat-icon class="!text-sm !w-4 !h-4">{{ revenue.growthPercentage >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-          {{ revenue.growthPercentage }}%
-        </span>
-        <span class="text-xs text-gray-400">مقارنة بالفترة السابقة</span>
-      </div>
+
+      @if (revenue?.growthPercentage !== undefined && revenue?.growthPercentage !== null) {
+        <div class="mt-4 flex items-center gap-2">
+          <span [ngClass]="revenue.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
+                class="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+            <mat-icon class="!text-sm !w-4 !h-4">{{ revenue.growthPercentage >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            {{ revenue.growthPercentage }}%
+          </span>
+          <span class="text-xs text-gray-400">مقارنة بالفترة السابقة</span>
+        </div>
+      }
     </div>
 
     <!-- Total Costs Card -->
@@ -51,35 +55,56 @@
           <mat-icon>trending_down</mat-icon>
         </div>
       </div>
-      <div class="mt-4 flex items-center gap-2" *ngIf="costs?.totalCosts?.growthPercentage !== undefined">
-        <span [ngClass]="costs.totalCosts.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
-              class="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
-          {{ costs.totalCosts.growthPercentage }}%
-        </span>
-        <span class="text-xs text-gray-400">مرتبات المعلمين والمصروفات</span>
-      </div>
+
+      @if (costs?.totalCosts?.growthPercentage !== undefined && costs?.totalCosts?.growthPercentage !== null) {
+        <div class="mt-4 flex items-center gap-2">
+          <span [ngClass]="costs.totalCosts.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
+                class="text-xs font-semibold px-2.5 py-1 rounded-full">
+            {{ costs.totalCosts.growthPercentage }}%
+          </span>
+          <span class="text-xs text-gray-400">مرتبات المعلمين والمصروفات</span>
+        </div>
+      }
     </div>
 
-    <!-- Net Profit Card -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-      <div class="flex justify-between items-start">
-        <div>
-          <p class="text-sm font-medium text-gray-500">صافي الربح</p>
-          <h3 class="text-3xl font-bold text-gray-900 mt-2">
-            {{ netProfit?.currentValue | number:'1.2-2' }} <span class="text-sm font-normal text-gray-500">{{ netProfit?.currency }}</span>
-          </h3>
-        </div>
-        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
-          <mat-icon>account_balance_wallet</mat-icon>
-        </div>
-      </div>
-      <div class="mt-4 flex items-center gap-2" *ngIf="netProfit?.growthPercentage !== undefined">
-        <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-          +{{ netProfit.growthPercentage }}%
-        </span>
-        <span class="text-xs text-gray-400">النمو الصافي للربح</span>
-      </div>
+   <!-- Net Profit Card -->
+<div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+  <div class="flex justify-between items-start">
+    <div>
+      <p class="text-sm font-medium text-gray-500">صافي الربح</p>
+      <h3 class="text-3xl font-bold text-gray-900 mt-2">
+        {{ netProfit?.currentValue | number:'1.2-2' }}
+        <span class="text-sm font-normal text-gray-500">{{ netProfit?.currency || 'EGP' }}</span>
+      </h3>
     </div>
+    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+      <mat-icon>account_balance_wallet</mat-icon>
+    </div>
+  </div>
+
+  @if (netProfit?.growthPercentage !== undefined && netProfit?.growthPercentage !== null) {
+    <div class="mt-4 flex items-center gap-2">
+      <span [ngClass]="netProfit.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
+            class="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+        <mat-icon class="!text-sm !w-4 !h-4">{{ netProfit.growthPercentage >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+        {{ netProfit.growthPercentage | number:'1.1-2' }}%
+      </span>
+      <span class="text-xs text-gray-400">مقارنة بالفترة السابقة</span>
+    </div>
+  }
+
+  <!-- تفاصيل إضافية من الـ Response الجديد (اختياري لتحسين شكل الكارد) -->
+  <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs text-gray-500">
+    <div>
+      <span>إجمالي المدفوعات: </span>
+      <span class="font-semibold text-gray-800">{{ netProfit?.totalPayments | number:'1.2-2' }}</span>
+    </div>
+    <div>
+      <span>الربح الصافي المحقق: </span>
+      <span class="font-semibold text-gray-800">{{ netProfit?.realizedNetProfit | number:'1.2-2' }}</span>
+    </div>
+  </div>
+</div>
 
   </div>
 
@@ -203,21 +228,28 @@
           <ng-container matColumnDef="studentName">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">اسم الطالب</th>
             <td mat-cell *matCellDef="let element" class="font-medium text-gray-900 py-3">
-              {{ element.studentName || 'غير متوفر' }}
+              {{ element.fullName || 'غير متوفر' }}
             </td>
           </ng-container>
 
           <ng-container matColumnDef="totalPaid">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">إجمالي المدفوع</th>
             <td mat-cell *matCellDef="let element" class="font-semibold text-emerald-600">
-              {{ element.totalPaid | number:'1.2-2' }}
+              {{ element.totalPaid | number:'1.2-2' }} {{ element.currency }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="sessionsReceived">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">عدد الجلسات</th>
+            <td mat-cell *matCellDef="let element" class="font-semibold text-emerald-600">
+              {{ element.sessionsReceived }}
             </td>
           </ng-container>
 
           <ng-container matColumnDef="totalCost">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">إجمالي التكلفة</th>
             <td mat-cell *matCellDef="let element" class="font-semibold text-rose-600">
-              {{ element.totalCost | number:'1.2-2' }}
+              {{ element.teacherCost | number:'1.2-2' }}
             </td>
           </ng-container>
 
@@ -232,13 +264,59 @@
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">هامش الربح</th>
             <td mat-cell *matCellDef="let element">
               <span class="px-2.5 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs font-semibold">
-                {{ element.profitMargin }}%
+                {{ element.profitMarginPercentage | number:'1.0-2' }}%
               </span>
             </td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumnsProfitability"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumnsProfitability;" class="hover:bg-gray-50 transition-colors"></tr>
+        </table>
+      </div>
+    </mat-tab>
+
+    <!-- Tab 4: Costs Analysis Breakdown -->
+    <mat-tab label="تحليل المصروفات والتكاليف">
+      <div class="overflow-x-auto mt-4">
+        <table mat-table [dataSource]="costsTableData" class="w-full">
+
+          <!-- بند المصروف -->
+          <ng-container matColumnDef="expenseType">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">بند المصروفات والتكاليف</th>
+            <td mat-cell *matCellDef="let element" class="font-medium text-gray-900 py-3">
+              {{ element.title }}
+            </td>
+          </ng-container>
+
+          <!-- القيمة الحالية -->
+          <ng-container matColumnDef="currentValue">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">القيمة الحالية</th>
+            <td mat-cell *matCellDef="let element" class="font-semibold text-rose-600">
+              {{ element.currentValue | number:'1.2-2' }} {{ element.currency }}
+            </td>
+          </ng-container>
+
+          <!-- القيمة السابقة -->
+          <ng-container matColumnDef="previousValue">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">القيمة السابقة</th>
+            <td mat-cell *matCellDef="let element" class="text-gray-600">
+              {{ element.previousValue | number:'1.2-2' }} {{ element.currency }}
+            </td>
+          </ng-container>
+
+          <!-- نسبة النمو / التغير -->
+          <ng-container matColumnDef="growthPercentage">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">نسبة التغير (النمو)</th>
+            <td mat-cell *matCellDef="let element">
+              <span [ngClass]="element.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
+                    class="px-2.5 py-1 rounded-md text-xs font-bold">
+                {{ element.growthPercentage }}%
+              </span>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsCosts"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsCosts;" class="hover:bg-gray-50 transition-colors"></tr>
         </table>
       </div>
     </mat-tab>
