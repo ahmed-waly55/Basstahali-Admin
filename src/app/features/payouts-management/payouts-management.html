@@ -1,0 +1,139 @@
+<div dir="rtl" class="min-h-screen bg-slate-50 p-6 font-sans">
+
+  <!-- رأس الصفحة -->
+  <header class="mb-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+    <h1 class="text-2xl font-black text-slate-800">إدارة رواتب ومستحقات المعلمين</h1>
+    <p class="text-sm text-slate-500 mt-1">لوحة التحكم المركزية للفترات والمستحقات المالية</p>
+  </header>
+
+  <!-- التابات (Tabs) لتنظيم الواجهة -->
+  <mat-tab-group animationDuration="0ms" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+
+    <!-- التاب الأول: جدول مستحقات المعلمين -->
+    <mat-tab label="مستحقات المعلمين">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <mat-icon class="text-indigo-600">payments</mat-icon>
+            قائمة المستحقات الحالية
+          </h2>
+          <button mat-stroked-button (click)="loadTeacherPayouts()" class="flex items-center gap-1">
+            <mat-icon>refresh</mat-icon> تحديث
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table mat-table [dataSource]="teacherPayouts()" class="w-full">
+
+            <ng-container matColumnDef="teacherName">
+              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">المعلم</th>
+              <td mat-cell *matCellDef="let element" class="font-medium text-slate-900">{{ element.teacherName || 'غير متوفر' }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="amount">
+              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">المبلغ</th>
+              <td mat-cell *matCellDef="let element" class="font-bold text-emerald-600">{{ element.amount | currency }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">الحالة</th>
+              <td mat-cell *matCellDef="let element">
+                <mat-chip class="!bg-slate-100 !text-slate-700 text-xs">{{ element.status || 'معلق' }}</mat-chip>
+              </td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700 text-center">الإجراءات</th>
+              <td mat-cell *matCellDef="let element" class="text-center">
+                <div class="flex items-center justify-center gap-2 py-2">
+                  <button mat-flat-button class="!bg-indigo-600 hover:!bg-indigo-700 !text-white !text-xs !min-w-0 !px-3"
+                          (click)="onExecuteAction(element.id, 'approve')">اعتماد</button>
+                  <button mat-flat-button class="!bg-rose-600 hover:!bg-rose-700 !text-white !text-xs !min-w-0 !px-3"
+                          (click)="onExecuteAction(element.id, 'close')">إغلاق</button>
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-slate-50 transition"></tr>
+          </table>
+
+          @if (teacherPayouts().length === 0) {
+            <div class="text-center py-12 text-slate-400">لا توجد مستحقات مسجلة حالياً</div>
+          }
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- التاب الثاني: إنشاء فترة صرف جديدة -->
+    <mat-tab label="إنشاء فترة صرف">
+      <div class="p-6 max-w-xl mx-auto">
+        <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <mat-icon class="text-indigo-600">date_range</mat-icon>
+          تحديد فترة مالية جديدة للصرف
+        </h2>
+
+        <form [formGroup]="periodForm" (ngSubmit)="onCreatePeriod()" class="flex flex-col gap-4">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>تاريخ البداية</mat-label>
+            <input matInput type="date" formControlName="startDate">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>تاريخ النهاية</mat-label>
+            <input matInput type="date" formControlName="endDate">
+          </mat-form-field>
+
+          <button mat-flat-button class="py-3 !bg-indigo-600 hover:!bg-indigo-700 text-white font-bold rounded-xl transition" [disabled]="periodForm.invalid">
+            حفظ وإنشاء الفترة
+          </button>
+        </form>
+      </div>
+    </mat-tab>
+
+    <!-- التاب الثالث: طلب تعديل مستحق (مع جلب المدرسين واختيار الـ ID) -->
+    <mat-tab label="طلب تعديل مستحق">
+      <div class="p-6 max-w-xl mx-auto">
+        <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <mat-icon class="text-indigo-600">edit_note</mat-icon>
+          إضافة تعديل أو خصم/مكافأة لمدرس
+        </h2>
+
+        <form [formGroup]="adjustmentForm" (ngSubmit)="onSubmitAdjustment()" class="flex flex-col gap-4">
+
+          <!-- قائمة منسدلة منسقة لاختيار المعلم وجلب الـ ID الخاص به -->
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>اختر المعلم</mat-label>
+            <mat-select formControlName="teacherPayoutId">
+              @for (teacher of teachers(); track teacher.id) {
+                <mat-option [value]="teacher.id">
+                  {{ teacher.name || teacher.fullName || teacher.email }}
+                </mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>نوع التعديل</mat-label>
+            <input matInput formControlName="type" placeholder="مثال: Bonus أو Deduction">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>المبلغ المطلوب</mat-label>
+            <input matInput type="number" formControlName="requestedAmount">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>السبب</mat-label>
+            <textarea matInput formControlName="reason" rows="3" placeholder="ذكر سبب التعديل المالي..."></textarea>
+          </mat-form-field>
+
+          <button mat-flat-button class="py-3 !bg-emerald-600 hover:!bg-emerald-700 text-white font-bold rounded-xl transition" [disabled]="adjustmentForm.invalid">
+            إرسال الطلب
+          </button>
+        </form>
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+</div>

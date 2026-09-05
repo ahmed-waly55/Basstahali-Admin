@@ -1,0 +1,65 @@
+<div class="max-w-md mx-auto mt-12 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+  <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">تغيير كلمة المرور</h2>
+
+  <form [formGroup]="changePasswordForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
+
+    <!-- كلمة المرور الحالية -->
+    <mat-form-field appearance="outline" class="w-full">
+      <mat-label>كلمة المرور الحالية</mat-label>
+      <input
+        matInput
+        [type]="hideCurrent ? 'password' : 'text'"
+        formControlName="currentPassword"
+        placeholder="أدخل كلمة المرور الحالية"
+      >
+      <button mat-icon-button matSuffix (click)="hideCurrent = !hideCurrent" [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hideCurrent" type="button">
+        <mat-icon>{{hideCurrent ? 'visibility_off' : 'visibility'}}</mat-icon>
+      </button>
+
+      @if (changePasswordForm.get('currentPassword')?.touched && changePasswordForm.get('currentPassword')?.errors?.['required']) {
+        <mat-error>كلمة المرور الحالية مطلوبة</mat-error>
+      }
+    </mat-form-field>
+
+    <!-- كلمة المرور الجديدة -->
+    <mat-form-field appearance="outline" class="w-full">
+      <mat-label>كلمة المرور الجديدة</mat-label>
+      <input
+        matInput
+        [type]="hideNew ? 'password' : 'text'"
+        formControlName="newPassword"
+        placeholder="أدخل كلمة المرور الجديدة"
+      >
+      <button mat-icon-button matSuffix (click)="hideNew = !hideNew" [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hideNew" type="button">
+        <mat-icon>{{hideNew ? 'visibility_off' : 'visibility'}}</mat-icon>
+      </button>
+
+      @if (changePasswordForm.get('newPassword')?.touched) {
+        <mat-error>
+          @if (changePasswordForm.get('newPassword')?.errors?.['required']) {
+            <span>كلمة المرور الجديدة مطلوبة</span>
+          }
+          @if (changePasswordForm.get('newPassword')?.errors?.['minlength']) {
+            <span>يجب ألا تقل كلمة المرور عن 6 أحرف</span>
+          }
+        </mat-error>
+      }
+    </mat-form-field>
+
+    <!-- زر الإرسال بتنسيق Material مزود بلمسات Tailwind -->
+    <button
+      mat-flat-button
+      color="primary"
+      type="submit"
+      [disabled]="isLoading"
+      class="w-full !py-3 !text-base !rounded-xl transition duration-200"
+    >
+      @if (!isLoading) {
+        <span>تغيير كلمة المرور</span>
+      } @else {
+        <span>جاري التحديث...</span>
+      }
+    </button>
+
+  </form>
+</div>

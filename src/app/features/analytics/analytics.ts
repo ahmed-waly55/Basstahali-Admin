@@ -49,7 +49,22 @@ export class Analytics implements OnInit, OnDestroy {
   // Table columns definition
   displayedColumnsTransactions: string[] = ['type', 'amount', 'direction', 'description', 'createdAt'];
   displayedColumnsPayments: string[] = ['studentName', 'amount', 'paymentMethod', 'status', 'recordedByName', 'paidAt'];
-  displayedColumnsProfitability: string[] = ['studentName', 'totalPaid', 'sessionsReceived', 'totalCost', 'netProfit', 'profitMargin'];
+
+  // تم تحديث أعمدة جدول ربحية الطلاب لتشمل جميع تفاصيل الـ API الجديدة
+  displayedColumnsProfitability: string[] = [
+    'studentName',
+    'phoneNumber',
+    'sessionsReceived',
+    'studentRevenue',
+    'totalPaid',
+    'unrealizedPaidAmount',
+    'averageStudentSessionPrice',
+    'averageTeacherSessionRate',
+    'totalCost',
+    'netProfit',
+    'profitMargin'
+  ];
+
   displayedColumnsCosts: string[] = ['expenseType', 'currentValue', 'previousValue', 'growthPercentage'];
 
   ngOnInit(): void {
@@ -146,10 +161,16 @@ export class Analytics implements OnInit, OnDestroy {
         'تاريخ الدفع': item.paidAt
       })));
 
+      // تحديث شيت إكسل الخاص بربحية الطلاب ليشمل البيانات الجديدة بالتفصيل
       const profitabilityWS = XLSX.utils.json_to_sheet(this.studentProfitability.map(item => ({
         'اسم الطالب': item.fullName || 'غير متوفر',
-        'إجمالي المدفوع': item.totalPaid,
+        'رقم الهاتف': item.phoneNumber || 'غير متوفر',
         'عدد الجلسات': item.sessionsReceived,
+        'إيرادات الطالب': item.studentRevenue,
+        'إجمالي المدفوع': item.totalPaid,
+        'المبلغ غير المحقق': item.unrealizedPaidAmount,
+        'متوسط سعر جلسة الطالب': item.averageStudentSessionPrice,
+        'متوسط معدل المعلم': item.averageTeacherSessionRate,
         'إجمالي التكلفة': item.teacherCost,
         'صافي الربح': item.netProfit,
         'هامش الربح (%)': item.profitMarginPercentage

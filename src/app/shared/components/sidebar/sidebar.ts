@@ -41,7 +41,7 @@ navSections: NavSection[] = [
     title: 'المحتوى التعليمي',
     items: [
       { label: 'الكورسات', route: '/courses', icon: 'school' },
-      { label: 'المنهاج والمناهج', route: '/curriculum', icon: 'menu_book' }
+      { label: ' المناهج', route: '/curriculum', icon: 'menu_book' }
     ]
   },
   {

@@ -1,0 +1,267 @@
+<div class="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen">
+
+  <!-- عنوان الصفحة -->
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">إدارة المناهج، المراحل، والمواد الدراسية</h1>
+    <p class="text-sm text-gray-500">إدارة شاملة لجميع الخطط التعليمية والمحتوى الدراسي</p>
+  </div>
+
+  <mat-tab-group animationDuration="0ms" class="bg-white shadow-md rounded-xl overflow-hidden">
+
+    <!-- التابة الأولى: المناهج الدراسية -->
+    <mat-tab label="المناهج الدراسية">
+      <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- نموذج الإضافة -->
+        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <mat-icon class="text-indigo-600">add_circle</mat-icon> إضافة منهج جديد
+          </h2>
+
+          <form [formGroup]="curriculumForm" (ngSubmit)="onSaveCurriculum()" class="flex flex-col gap-4">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>الاسم بالعربية</mat-label>
+              <input matInput formControlName="nameAr" placeholder="مثال: المنهج المصري">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>الاسم بالإنجليزية</mat-label>
+              <input matInput formControlName="nameEn" placeholder="Example: Egyptian Curriculum">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>الكود (Code)</mat-label>
+              <input matInput formControlName="code" placeholder="مثال: EGY-01">
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" class="w-full py-2">حفظ المنهج</button>
+          </form>
+        </div>
+
+        <!-- جدول العرض -->
+        <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          <div class="p-4 bg-gray-100 font-semibold text-gray-700 border-b">قائمة المناهج الحالية</div>
+
+          @if (curriculums().length > 0) {
+            <table mat-table [dataSource]="curriculums()" class="w-full">
+              <ng-container matColumnDef="nameAr">
+                <th mat-header-cell *matHeaderCellDef>الاسم بالعربية</th>
+                <td mat-cell *matCellDef="let element">{{ element.nameAr }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="nameEn">
+                <th mat-header-cell *matHeaderCellDef>الاسم بالإنجليزية</th>
+                <td mat-cell *matCellDef="let element">{{ element.nameEn }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="code">
+                <th mat-header-cell *matHeaderCellDef>الكود</th>
+                <td mat-cell *matCellDef="let element"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold">{{ element.code }}</span></td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="curriculumColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: curriculumColumns;"></tr>
+            </table>
+          } @else {
+            <div class="p-8 text-center text-gray-400">لا توجد مناهج مضافة حالياً</div>
+          }
+        </div>
+
+      </div>
+    </mat-tab>
+
+    <!-- التابة الثانية: المراحل الدراسية -->
+    <mat-tab label="المراحل الدراسية">
+      <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- نموذج الإضافة -->
+        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <mat-icon class="text-indigo-600">add_circle</mat-icon> إضافة مرحلة جديدة
+          </h2>
+
+          <form [formGroup]="gradeLevelForm" (ngSubmit)="onSaveGradeLevel()" class="flex flex-col gap-4">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>اختر المنهج</mat-label>
+              <mat-select formControlName="curriculumId">
+                @for (curr of curriculums(); track curr.id) {
+                  <mat-option [value]="curr.id">{{ curr.nameAr }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>اسم المرحلة بالعربية</mat-label>
+              <input matInput formControlName="nameAr" placeholder="مثال: الصف الأول الإعدادي">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>اسم المرحلة بالإنجليزية</mat-label>
+              <input matInput formControlName="nameEn" placeholder="Example: First Prep">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>الكود</mat-label>
+              <input matInput formControlName="code" placeholder="مثال: PREP-1">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>الترتيب (Sort Order)</mat-label>
+              <input matInput type="number" formControlName="sortOrder">
+            </mat-form-field>
+
+            <button mat-flat-button color="primary" class="w-full">حفظ المرحلة</button>
+          </form>
+        </div>
+
+        <!-- جدول العرض -->
+        <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          <div class="p-4 bg-gray-100 font-semibold text-gray-700 border-b">قائمة المراحل الدراسية</div>
+
+          @if (gradeLevels().length > 0) {
+            <table mat-table [dataSource]="gradeLevels()" class="w-full">
+              <ng-container matColumnDef="nameAr">
+                <th mat-header-cell *matHeaderCellDef>المرحلة</th>
+                <td mat-cell *matCellDef="let element">{{ element.nameAr }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="nameEn">
+                <th mat-header-cell *matHeaderCellDef>English Name</th>
+                <td mat-cell *matCellDef="let element">{{ element.nameEn }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="code">
+                <th mat-header-cell *matHeaderCellDef>الكود</th>
+                <td mat-cell *matCellDef="let element"><span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">{{ element.code }}</span></td>
+              </ng-container>
+
+              <ng-container matColumnDef="curriculum">
+                <th mat-header-cell *matHeaderCellDef>المنهج التابع له</th>
+                <td mat-cell *matCellDef="let element">{{ element.curriculumNameAr || element.curriculumId }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="sortOrder">
+                <th mat-header-cell *matHeaderCellDef>الترتيب</th>
+                <td mat-cell *matCellDef="let element">{{ element.sortOrder }}</td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="gradeLevelColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: gradeLevelColumns;"></tr>
+            </table>
+          } @else {
+            <div class="p-8 text-center text-gray-400">لا توجد مراحل دراسية مضافة</div>
+          }
+        </div>
+
+      </div>
+    </mat-tab>
+
+    <!-- التابة الثالثة: المواد الدراسية -->
+    <mat-tab label="المواد الدراسية">
+      <div class="p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- نموذج الإضافة -->
+        <div class="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <mat-icon class="text-indigo-600">add_circle</mat-icon> إضافة مادة جديدة
+          </h2>
+
+          <form [formGroup]="subjectForm" (ngSubmit)="onSaveSubject()" class="flex flex-col gap-4">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>اسم المادة بالعربية</mat-label>
+              <input matInput formControlName="nameAr" placeholder="مثال: رياضيات">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>اسم المادة بالإنجليزية</mat-label>
+              <input matInput formControlName="nameEn" placeholder="Example: Mathematics">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>الكود</mat-label>
+              <input matInput formControlName="code" placeholder="مثال: MATH-101">
+            </mat-form-field>
+
+            <!-- اختيار متعدد للمناهج -->
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>المناهج المرتبطة</mat-label>
+              <mat-select formControlName="curriculumIds" multiple>
+                @for (curr of curriculums(); track curr.id) {
+                  <mat-option [value]="curr.id">{{ curr.nameAr }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <!-- اختيار متعدد للمراحل -->
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>المراحل الدراسية المرتبطة</mat-label>
+              <mat-select formControlName="gradeLevelIds" multiple>
+                @for (grade of gradeLevels(); track grade.id) {
+                  <mat-option [value]="grade.id">{{ grade.nameAr }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <div class="flex items-center my-2">
+              <mat-checkbox formControlName="isShared">مادة مشتركة (Is Shared)</mat-checkbox>
+            </div>
+
+            <button mat-flat-button color="primary" class="w-full">حفظ المادة الدراسية</button>
+          </form>
+        </div>
+
+        <!-- جدول العرض -->
+        <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+          <div class="p-4 bg-gray-100 font-semibold text-gray-700 border-b">قائمة المواد الدراسية</div>
+
+          @if (subjects().length > 0) {
+            <table mat-table [dataSource]="subjects()" class="w-full">
+              <ng-container matColumnDef="nameAr">
+                <th mat-header-cell *matHeaderCellDef>المادة</th>
+                <td mat-cell *matCellDef="let element">{{ element.nameAr }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="nameEn">
+                <th mat-header-cell *matHeaderCellDef>English</th>
+                <td mat-cell *matCellDef="let element">{{ element.nameEn }}</td>
+              </ng-container>
+
+              <ng-container matColumnDef="code">
+                <th mat-header-cell *matHeaderCellDef>الكود</th>
+                <td mat-cell *matCellDef="let element"><span class="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs">{{ element.code }}</span></td>
+              </ng-container>
+
+              <ng-container matColumnDef="isShared">
+                <th mat-header-cell *matHeaderCellDef>مفعلة كمشتركة</th>
+                <td mat-cell *matCellDef="let element">
+                  @if (element.isShared) {
+                    <span class="text-green-600 font-semibold text-xs bg-green-50 px-2 py-1 rounded">نعم</span>
+                  } @else {
+                    <span class="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">لا</span>
+                  }
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef>إجراءات</th>
+                <td mat-cell *matCellDef="let element">
+                  <button mat-icon-button color="primary" title="تعديل">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="subjectColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: subjectColumns;"></tr>
+            </table>
+          } @else {
+            <div class="p-8 text-center text-gray-400">لا توجد مواد دراسية مضافة حتى الآن</div>
+          }
+        </div>
+
+      </div>
+    </mat-tab>
+
+  </mat-tab-group>
+
+</div>

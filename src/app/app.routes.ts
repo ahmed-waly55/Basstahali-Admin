@@ -16,11 +16,16 @@ export const routes: Routes = [
 
         ]
       },
-      {path:"analytics", loadComponent:()=> import("./features/analytics/analytics").then( m => m.Analytics), title: "لوحة التحكم | التقارير والاحصائيات"}
+      {path:"analytics", loadComponent:()=> import("./features/analytics/analytics").then( m => m.Analytics), title: "لوحة التحكم | التقارير والاحصائيات"},
+      {path:"expenses", loadComponent:()=> import("./features/expenses/expenses").then( m => m.Expenses), title: "لوحة التحكم | المصروفات"},
+      {path:"teacher-salaries", loadComponent:()=> import("./features/payouts-management/payouts-management").then( m => m.PayoutsManagementComponent), title: "لوحة التحكم | رواتب المعلمين"},
+      {path:"curriculum", loadComponent:()=> import("./features/curriculum/curriculum").then( m => m.Curriculum), title: "لوحة التحكم | المناهج"},
+      {path:"settings", loadComponent:()=> import("./features/settings/settings").then( m => m.Settings), title: "لوحة التحكم | الاعدادات"},
     ]
 
 },
 
 
-  {path:"login", canActivate:[guestGuard] , loadComponent:()=> import("./core/components/login/login").then(m => m.Login), title:"تسجيل الدخول"}
+  {path:"login", canActivate:[guestGuard] , loadComponent:()=> import("./core/components/login/login").then(m => m.Login), title:"تسجيل الدخول"},
+
 ];

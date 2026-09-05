@@ -22,7 +22,6 @@
           <p class="text-sm font-medium text-gray-500">إجمالي الإيرادات</p>
           <h3 class="text-3xl font-bold text-gray-900 mt-2">
             {{ revenue?.currentValue | number:'1.2-2' }} <span class="text-sm font-normal text-gray-500">{{ revenue?.currency }}</span>
-
           </h3>
         </div>
         <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -67,44 +66,43 @@
       }
     </div>
 
-   <!-- Net Profit Card -->
-<div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-  <div class="flex justify-between items-start">
-    <div>
-      <p class="text-sm font-medium text-gray-500">صافي الربح</p>
-      <h3 class="text-3xl font-bold text-gray-900 mt-2">
-        {{ netProfit?.currentValue | number:'1.2-2' }}
-        <span class="text-sm font-normal text-gray-500">{{ netProfit?.currency || 'EGP' }}</span>
-      </h3>
-    </div>
-    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
-      <mat-icon>account_balance_wallet</mat-icon>
-    </div>
-  </div>
+    <!-- Net Profit Card -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="text-sm font-medium text-gray-500">صافي الربح</p>
+          <h3 class="text-3xl font-bold text-gray-900 mt-2">
+            {{ netProfit?.currentValue | number:'1.2-2' }}
+            <span class="text-sm font-normal text-gray-500">{{ netProfit?.currency || 'EGP' }}</span>
+          </h3>
+        </div>
+        <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
+          <mat-icon>account_balance_wallet</mat-icon>
+        </div>
+      </div>
 
-  @if (netProfit?.growthPercentage !== undefined && netProfit?.growthPercentage !== null) {
-    <div class="mt-4 flex items-center gap-2">
-      <span [ngClass]="netProfit.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
-            class="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
-        <mat-icon class="!text-sm !w-4 !h-4">{{ netProfit.growthPercentage >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-        {{ netProfit.growthPercentage | number:'1.1-2' }}%
-      </span>
-      <span class="text-xs text-gray-400">مقارنة بالفترة السابقة</span>
-    </div>
-  }
+      @if (netProfit?.growthPercentage !== undefined && netProfit?.growthPercentage !== null) {
+        <div class="mt-4 flex items-center gap-2">
+          <span [ngClass]="netProfit.growthPercentage >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'"
+                class="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+            <mat-icon class="!text-sm !w-4 !h-4">{{ netProfit.growthPercentage >= 0 ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            {{ netProfit.growthPercentage | number:'1.1-2' }}%
+          </span>
+          <span class="text-xs text-gray-400">مقارنة بالفترة السابقة</span>
+        </div>
+      }
 
-  <!-- تفاصيل إضافية من الـ Response الجديد (اختياري لتحسين شكل الكارد) -->
-  <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs text-gray-500">
-    <div>
-      <span>إجمالي المدفوعات: </span>
-      <span class="font-semibold text-gray-800">{{ netProfit?.totalPayments | number:'1.2-2' }}</span>
+      <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs text-gray-500">
+        <div>
+          <span>إجمالي المدفوعات: </span>
+          <span class="font-semibold text-gray-800">{{ netProfit?.totalPayments | number:'1.2-2' }}</span>
+        </div>
+        <div>
+          <span>الربح الصافي المحقق: </span>
+          <span class="font-semibold text-gray-800">{{ netProfit?.realizedNetProfit | number:'1.2-2' }}</span>
+        </div>
+      </div>
     </div>
-    <div>
-      <span>الربح الصافي المحقق: </span>
-      <span class="font-semibold text-gray-800">{{ netProfit?.realizedNetProfit | number:'1.2-2' }}</span>
-    </div>
-  </div>
-</div>
 
   </div>
 
@@ -225,6 +223,7 @@
       <div class="overflow-x-auto mt-4">
         <table mat-table [dataSource]="studentProfitability" class="w-full">
 
+          <!-- اسم الطالب -->
           <ng-container matColumnDef="studentName">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">اسم الطالب</th>
             <td mat-cell *matCellDef="let element" class="font-medium text-gray-900 py-3">
@@ -232,13 +231,15 @@
             </td>
           </ng-container>
 
-          <ng-container matColumnDef="totalPaid">
-            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">إجمالي المدفوع</th>
-            <td mat-cell *matCellDef="let element" class="font-semibold text-emerald-600">
-              {{ element.totalPaid | number:'1.2-2' }} {{ element.currency }}
+          <!-- رقم الهاتف -->
+          <ng-container matColumnDef="phoneNumber">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">رقم الهاتف</th>
+            <td mat-cell *matCellDef="let element" class="text-gray-600 text-xs">
+              {{ element.phoneNumber || 'غير متوفر' }}
             </td>
           </ng-container>
 
+          <!-- عدد الجلسات -->
           <ng-container matColumnDef="sessionsReceived">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">عدد الجلسات</th>
             <td mat-cell *matCellDef="let element" class="font-semibold text-emerald-600">
@@ -246,6 +247,47 @@
             </td>
           </ng-container>
 
+          <!-- إيرادات الطالب -->
+          <ng-container matColumnDef="studentRevenue">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">إيرادات الطالب</th>
+            <td mat-cell *matCellDef="let element" class="font-semibold text-indigo-600">
+              {{ element.studentRevenue | number:'1.2-2' }} {{ element.currency }}
+            </td>
+          </ng-container>
+
+          <!-- إجمالي المدفوع -->
+          <ng-container matColumnDef="totalPaid">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">إجمالي المدفوع</th>
+            <td mat-cell *matCellDef="let element" class="font-semibold text-emerald-600">
+              {{ element.totalPaid | number:'1.2-2' }} {{ element.currency }}
+            </td>
+          </ng-container>
+
+          <!-- المبلغ غير المحقق -->
+          <ng-container matColumnDef="unrealizedPaidAmount">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">غير محقق</th>
+            <td mat-cell *matCellDef="let element" class="text-amber-600">
+              {{ element.unrealizedPaidAmount | number:'1.2-2' }} {{ element.currency }}
+            </td>
+          </ng-container>
+
+          <!-- متوسط سعر جلسة الطالب -->
+          <ng-container matColumnDef="averageStudentSessionPrice">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">متوسط سعر الجلسة</th>
+            <td mat-cell *matCellDef="let element" class="text-gray-700">
+              {{ element.averageStudentSessionPrice | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- متوسط معدل جلسة المعلم -->
+          <ng-container matColumnDef="averageTeacherSessionRate">
+            <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">متوسط معدل المعلم</th>
+            <td mat-cell *matCellDef="let element" class="text-gray-700">
+              {{ element.averageTeacherSessionRate | number:'1.2-2' }}
+            </td>
+          </ng-container>
+
+          <!-- إجمالي التكلفة -->
           <ng-container matColumnDef="totalCost">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">إجمالي التكلفة</th>
             <td mat-cell *matCellDef="let element" class="font-semibold text-rose-600">
@@ -253,6 +295,7 @@
             </td>
           </ng-container>
 
+          <!-- صافي الربح -->
           <ng-container matColumnDef="netProfit">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">صافي الربح</th>
             <td mat-cell *matCellDef="let element" class="font-bold text-blue-600">
@@ -260,6 +303,7 @@
             </td>
           </ng-container>
 
+          <!-- هامش الربح -->
           <ng-container matColumnDef="profitMargin">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">هامش الربح</th>
             <td mat-cell *matCellDef="let element">
@@ -280,7 +324,6 @@
       <div class="overflow-x-auto mt-4">
         <table mat-table [dataSource]="costsTableData" class="w-full">
 
-          <!-- بند المصروف -->
           <ng-container matColumnDef="expenseType">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">بند المصروفات والتكاليف</th>
             <td mat-cell *matCellDef="let element" class="font-medium text-gray-900 py-3">
@@ -288,7 +331,6 @@
             </td>
           </ng-container>
 
-          <!-- القيمة الحالية -->
           <ng-container matColumnDef="currentValue">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">القيمة الحالية</th>
             <td mat-cell *matCellDef="let element" class="font-semibold text-rose-600">
@@ -296,7 +338,6 @@
             </td>
           </ng-container>
 
-          <!-- القيمة السابقة -->
           <ng-container matColumnDef="previousValue">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">القيمة السابقة</th>
             <td mat-cell *matCellDef="let element" class="text-gray-600">
@@ -304,7 +345,6 @@
             </td>
           </ng-container>
 
-          <!-- نسبة النمو / التغير -->
           <ng-container matColumnDef="growthPercentage">
             <th mat-header-cell *matHeaderCellDef class="!text-right font-bold text-gray-700">نسبة التغير (النمو)</th>
             <td mat-cell *matCellDef="let element">
