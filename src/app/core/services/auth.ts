@@ -15,17 +15,32 @@ export class Auth {
   }
 
   changePassword(data: { currentPassword: string; newPassword: string }): Observable<any> {
-    // استبدل 'token' باسم المفتاح الفعلي المخزن عندك في الـ LocalStorage
     const token = localStorage.getItem('token') || '';
 
     const headers = new HttpHeaders({
-      'token': token // تأكد أيضاً إذا كان الـ Backend يطلبها 'token' أو 'Authorization'
+      'token': token
     });
 
     return this._HttpClient.post(
       `${environment.baseUrl}/api/v1/auth/change-password`,
       data,
       { headers }
+    );
+  }
+
+  // دالة تجديد الرمز (Refresh Token)
+  refreshToken(refreshToken:string): Observable<any> {
+    return this._HttpClient.post(
+      `${environment.baseUrl}/api/v1/auth/refresh-token`,
+      {refreshToken , device : "unkone"}
+    );
+  }
+
+  // دالة تسجيل الخروج (Logout)
+  logoutApi(data: { refreshToken: string; device: string }): Observable<any> {
+    return this._HttpClient.post(
+      `${environment.baseUrl}/api/v1/auth/logout`,
+      data
     );
   }
 }

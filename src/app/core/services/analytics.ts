@@ -53,7 +53,6 @@ export class AnalyticsService {
     return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-periods`, { headers });
   }
 
-
   /**
    * 6. جلب مدفوعات الطلاب (GET)
    */
@@ -96,10 +95,40 @@ export class AnalyticsService {
 
   /**
    * 11. تحويل العملات (GET)
-   * ملاحظة: إذا كانت هذه الـ Endpoint تحتاج إلى Query Parameters مثل (from, to, amount) يمكنك تمريرها كـ options.params
    */
   convertExchangeRate(params?: any): Observable<any> {
     const headers = this.getHeaders();
     return this.http.get<any>(`${environment.baseUrl}/api/v1/exchange-rates/convert`, { headers, params });
   }
+
+  // detailed-analytics
+  getTeachersProfitReports(): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/teachers`, { headers });
+  }
+
+
+    getStudentsProfitReports(): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/students`, { headers });
+  }
+
+    getSubjectsProfitReports(): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/subjects`, { headers });
+  }
+
+
+    getCoursesProfitReports(): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/courses`, { headers });
+  }
+
+
+    getPeriodsProfitReports(): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/periods`, { headers });
+  }
+
+
 }

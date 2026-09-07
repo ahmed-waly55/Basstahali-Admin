@@ -27,39 +27,19 @@ interface NavSection {
   styleUrl: './sidebar.css',
 })
 export class Sidebar {
-  // مصفوفة الأقسام والروابط
-navSections: NavSection[] = [
-  {
-    title: 'القائمة الرئيسية',
-    items: [
-      { label: 'الرئيسية', route: '/home', icon: 'dashboard' },
-      { label: 'المستخدمين والصلاحيات', route: '/users', icon: 'group' },
-      { label: 'التقارير والإحصائيات', route: '/analytics', icon: 'analytics' }
-    ]
-  },
-  {
-    title: 'المحتوى التعليمي',
-    items: [
-      { label: 'الكورسات', route: '/courses', icon: 'school' },
-      { label: ' المناهج', route: '/curriculum', icon: 'menu_book' }
-    ]
-  },
-  {
-    title: 'الإدارة المالية',
-    items: [
-      { label: 'رواتب المعلمين', route: '/teacher-salaries', icon: 'payments' },
-      { label: 'المصروفات', route: '/expenses', icon: 'receipt_long' }
-    ]
-  },
-  {
-    title: 'النظام',
-    items: [
-      { label: 'الإعدادات العامة', route: '/settings', icon: 'settings' },
-      { label: 'الأمان والحماية', route: '/security', icon: 'security' }
-    ]
-  }
-];
 
+navItems: NavItem[] = [
+  { label: 'الرئيسية', route: '/home', icon: 'dashboard' },
+  { label: 'المستخدمين والصلاحيات', route: '/users', icon: 'group',  },
+  { label: 'التقارير والإحصائيات', route: '/analytics', icon: 'analytics',  },
+  { label: 'الإحصائيات بالتفصيل', route: '/detailed-analytics', icon: 'bar_chart',  },
+  { label: 'الكورسات', route: '/courses', icon: 'school' },
+  { label: 'المناهج', route: '/curriculum', icon: 'menu_book' },
+  { label: 'رواتب المعلمين', route: '/teacher-salaries', icon: 'payments' },
+  { label: 'المصروفات', route: '/expenses', icon: 'receipt_long'  },
+  { label: 'الإعدادات العامة', route: '/settings', icon: 'settings'  },
+  { label: 'سجل المستخدمين', route: '/audit-logs', icon: 'security' }
+];
 
   logout(){
     localStorage.clear();

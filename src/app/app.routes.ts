@@ -21,6 +21,9 @@ export const routes: Routes = [
       {path:"teacher-salaries", loadComponent:()=> import("./features/payouts-management/payouts-management").then( m => m.PayoutsManagementComponent), title: "لوحة التحكم | رواتب المعلمين"},
       {path:"curriculum", loadComponent:()=> import("./features/curriculum/curriculum").then( m => m.Curriculum), title: "لوحة التحكم | المناهج"},
       {path:"settings", loadComponent:()=> import("./features/settings/settings").then( m => m.Settings), title: "لوحة التحكم | الاعدادات"},
+      {path:"courses", loadComponent:()=> import("./features/courses/courses").then( m => m.Courses), title: "لوحة التحكم | الكورسات"},
+      {path:"detailed-analytics", loadComponent:()=> import("./features/detailed-analytics/detailed-analytics").then( m => m.DetailedAnalytics), title: "لوحة التحكم | الاحصائيات بالتفصيل"},
+      {path:"audit-logs", loadComponent:()=> import ("./features/audit/audit").then( m => m.Audit), title:"سجل المستخدمين"}
     ]
 
 },
