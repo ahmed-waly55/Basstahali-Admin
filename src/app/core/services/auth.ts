@@ -22,7 +22,7 @@ export class Auth {
     });
 
     return this._HttpClient.post(
-      `${environment.baseUrl}/api/v1/auth/change-password`,
+      `${environment.baseUrl}/api/v1/admin/auth/change-password`,
       data,
       { headers }
     );

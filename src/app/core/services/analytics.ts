@@ -131,4 +131,11 @@ export class AnalyticsService {
   }
 
 
+
+    getcurriculaProfitReports(): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/curricula`, { headers });
+  }
+
+
 }

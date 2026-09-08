@@ -14,6 +14,8 @@ import { AnalyticsService } from '../../core/services/analytics';
 // تسجيل مكونات Chart.js الإجبارية للإصدارات الحديثة
 Chart.register(...registerables);
 
+type ReportType = 'teachers' | 'students' | 'subjects' | 'courses' | 'curricula' | 'periods';
+
 @Component({
   selector: 'app-detailed-analytics',
   standalone: true,
@@ -34,7 +36,7 @@ export class DetailedAnalytics implements OnInit, OnDestroy {
   private analyticsService = inject(AnalyticsService);
   private querySubscription?: Subscription;
 
-  activeTab = signal<'teachers' | 'students' | 'subjects' | 'courses' | 'periods'>('teachers');
+  activeTab = signal<ReportType>('teachers');
   reportData = signal<any>(null);
   isLoading = signal<boolean>(false);
 
@@ -57,23 +59,21 @@ export class DetailedAnalytics implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // إلغاء الاشتراك لمنع تسريب الذاكرة عند تدمير المكون
     if (this.querySubscription) {
       this.querySubscription.unsubscribe();
     }
   }
 
   onTabChange(index: number) {
-    const tabs: ('teachers' | 'students' | 'subjects' | 'courses' | 'periods')[] = ['teachers', 'students', 'subjects', 'courses', 'periods'];
+    const tabs: ReportType[] = ['teachers', 'students', 'subjects', 'courses', 'curricula', 'periods'];
     const selected = tabs[index];
     this.activeTab.set(selected);
     this.fetchData(selected);
   }
 
-  fetchData(type: 'teachers' | 'students' | 'subjects' | 'courses' | 'periods') {
+  fetchData(type: ReportType) {
     this.isLoading.set(true);
 
-    // إلغاء أي طلب قديم قيد التنفيذ قبل البدء بطلب جديد
     if (this.querySubscription) {
       this.querySubscription.unsubscribe();
     }
@@ -93,6 +93,9 @@ export class DetailedAnalytics implements OnInit, OnDestroy {
       case 'courses':
         request$ = this.analyticsService.getCoursesProfitReports();
         break;
+      case 'curricula':
+        request$ = this.analyticsService.getcurriculaProfitReports();
+        break;
       case 'periods':
         request$ = this.analyticsService.getPeriodsProfitReports();
         break;
@@ -101,7 +104,6 @@ export class DetailedAnalytics implements OnInit, OnDestroy {
     if (request$) {
       this.querySubscription = request$.subscribe({
         next: (res) => {
-          // التعامل مع مختلف أشكال الـ Responses (سواء كانت البيانات مباشرة أو داخل res.data)
           const actualData = res?.data || res;
           this.reportData.set(actualData);
           this.updateChart(actualData, type);
