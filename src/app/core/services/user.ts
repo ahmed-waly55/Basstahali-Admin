@@ -25,4 +25,25 @@ export class User {
     const headers = this.getHeaders();
     return this._HttpClient.get(`${environment.baseUrl}/api/v1/students`, { headers });
   }
+
+
+// teacher-forms
+
+  getTeacherForms(): Observable<any> {
+    const headers = this.getHeaders();
+    return this._HttpClient.get(`${environment.baseUrl}/api/v1/teacher-forms`, { headers });
+  }
+
+
+  approveTeacherForm(requestId: string): Observable<any> {
+    const headers = this.getHeaders();
+    return this._HttpClient.post(`${environment.baseUrl}/api/v1/teacher-forms/${requestId}/approve`, {}, { headers });
+  }
+
+  rejectTeacherForm(requestId: string, reason: string): Observable<any> {
+    const headers = this.getHeaders();
+    const body = { reason };
+    return this._HttpClient.post(`${environment.baseUrl}/api/v1/teacher-forms/${requestId}/reject`, body, { headers });
+  }
+
 }

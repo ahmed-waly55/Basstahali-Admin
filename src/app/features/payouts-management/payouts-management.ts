@@ -47,7 +47,8 @@ export class PayoutsManagementComponent implements OnInit {
   teacherPayouts = signal<any[]>([]);
   teachers = signal<any[]>([]);
 
-  displayedColumns: string[] = ['teacherName', 'amount', 'status', 'actions'];
+// أضف هذه الحقول في الـ Component لديك
+  displayedColumns: string[] = ['teacherName', 'phone', 'subjects', 'rate', 'sessions', 'status', 'actions'];
 
   periodForm: FormGroup = this.fb.group({
     startDate: ['', Validators.required],
@@ -67,19 +68,13 @@ export class PayoutsManagementComponent implements OnInit {
   }
 
 loadTeacherPayouts() {
-    this.payoutsService.getTeacherPayouts().subscribe({
-      next: (res: any) => {
-        // التعامل الآمن مع الـ Response سواء كانت مصفوفة مباشرة أو داخل كائن مفهرس
-        const list = Array.isArray(res) ? res : (res?.data?.items || res?.data || res?.items || []);
-        this.teacherPayouts.set(list);
-      },
-      error: (err) => {
-        console.error('Error fetching teacher payouts', err);
-        Swal.fire('خطأ', 'حدث خطأ أثناء جلب مستحقات المدرسين.', 'error');
-        this.teacherPayouts.set([]); // تعيين مصفوفة فارغة في حالة الخطأ لمنع انهيار الجدول
-      }
-    });
-  }
+  this.payoutsService.getTeacherPayouts().subscribe((response: any) => {
+    if (response && response.success && response.data && response.data.items) {
+      this.teacherPayouts.set(response.data.items);
+      this.teachers.set(response.data.items);
+    }
+  });
+}
 
   loadTeachers() {
     this.teacherService.getTeachers().subscribe({

@@ -31,6 +31,7 @@ export class Sidebar {
 navItems: NavItem[] = [
   { label: 'الرئيسية', route: '/home', icon: 'dashboard' },
   { label: 'المستخدمين والصلاحيات', route: '/users', icon: 'group',  },
+  { label: 'طلبات المدرسين', route: '/teacher-forms', icon: 'group',  },
   { label: 'التقارير والإحصائيات', route: '/analytics', icon: 'analytics',  },
   { label: 'الإحصائيات بالتفصيل', route: '/detailed-analytics', icon: 'bar_chart',  },
   { label: 'الكورسات', route: '/courses', icon: 'school' },

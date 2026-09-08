@@ -50,7 +50,7 @@ export class PayoutsService {
   // 4. جلب قائمة مستحقات المعلمين (GET)
   getTeacherPayouts(): Observable<any> {
     return this.http.get<any>(
-      `${environment.baseUrl}/api/v1/teacher-payouts`,
+      `${environment.baseUrl}/api/v1/admin/teachers/financial-summary`,
       { headers: this.getAuthHeaders() }
     );
   }

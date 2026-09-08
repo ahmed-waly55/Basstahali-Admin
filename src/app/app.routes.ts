@@ -23,7 +23,8 @@ export const routes: Routes = [
       {path:"settings", loadComponent:()=> import("./features/settings/settings").then( m => m.Settings), title: "لوحة التحكم | الاعدادات"},
       {path:"courses", loadComponent:()=> import("./features/courses/courses").then( m => m.Courses), title: "لوحة التحكم | الكورسات"},
       {path:"detailed-analytics", loadComponent:()=> import("./features/detailed-analytics/detailed-analytics").then( m => m.DetailedAnalytics), title: "لوحة التحكم | الاحصائيات بالتفصيل"},
-      {path:"audit-logs", loadComponent:()=> import ("./features/audit/audit").then( m => m.Audit), title:"سجل المستخدمين"}
+      {path:"audit-logs", loadComponent:()=> import ("./features/audit/audit").then( m => m.Audit), title:"سجل المستخدمين"},
+      {path:"teacher-forms", loadComponent:()=> import("./features/teacher-forms/teacher-forms").then(m => m.TeacherForms), title:"طلبات المدرسين"}
     ]
 
 },

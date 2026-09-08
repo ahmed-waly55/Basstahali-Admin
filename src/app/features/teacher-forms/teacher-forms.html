@@ -1,0 +1,87 @@
+<div class="p-6 max-w-7xl mx-auto">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">طلبات المعلمين</h1>
+    <button (click)="loadTeacherForms()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition">
+      تحديث البيانات
+    </button>
+  </div>
+
+  <div class="mat-elevation-z8 rounded-xl overflow-hidden shadow-lg bg-white border border-gray-100 overflow-x-auto">
+    <table mat-table [dataSource]="dataSource" class="w-full">
+
+      <!-- اسم المعلم -->
+      <ng-container matColumnDef="fullName">
+        <th mat-header-cell *matHeaderCellDef class="bg-gray-50 font-bold text-gray-700 p-4"> اسم المعلم </th>
+        <td mat-cell *matCellDef="let element" class="p-4 font-semibold text-gray-900"> {{ element.fullName }} </td>
+      </ng-container>
+
+      <!-- البريد الإلكتروني -->
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef class="bg-gray-50 font-bold text-gray-700 p-4"> البريد الإلكتروني </th>
+        <td mat-cell *matCellDef="let element" class="p-4 text-gray-600"> {{ element.email }} </td>
+      </ng-container>
+
+      <!-- رقم الواتساب -->
+      <ng-container matColumnDef="whatsAppNumber">
+        <th mat-header-cell *matHeaderCellDef class="bg-gray-50 font-bold text-gray-700 p-4"> الواتساب </th>
+        <td mat-cell *matCellDef="let element" class="p-4 text-gray-600"> {{ element.whatsAppNumber }} </td>
+      </ng-container>
+
+      <!-- المنهج -->
+      <ng-container matColumnDef="curriculumName">
+        <th mat-header-cell *matHeaderCellDef class="bg-gray-50 font-bold text-gray-700 p-4"> المنهج </th>
+        <td mat-cell *matCellDef="let element" class="p-4 text-gray-600"> {{ element.curriculumName }} </td>
+      </ng-container>
+
+      <!-- المرحلة الدراسية -->
+      <ng-container matColumnDef="gradeLevelName">
+        <th mat-header-cell *matHeaderCellDef class="bg-gray-50 font-bold text-gray-700 p-4"> المرحلة </th>
+        <td mat-cell *matCellDef="let element" class="p-4 text-gray-600"> {{ element.gradeLevelName }} </td>
+      </ng-container>
+
+      <!-- الحالة -->
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef class="bg-gray-50 font-bold text-gray-700 p-4"> الحالة </th>
+        <td mat-cell *matCellDef="let element" class="p-4">
+          <span class="px-3 py-1 rounded-full text-xs font-bold"
+                [ngClass]="{
+                  'bg-yellow-100 text-yellow-800': element.status === 'Pending',
+                  'bg-green-100 text-green-800': element.status === 'Approved',
+                  'bg-red-100 text-red-800': element.status === 'Rejected'
+                }">
+            {{ element.status }}
+          </span>
+        </td>
+      </ng-container>
+
+      <!-- الأكشنز (موافقة / رفض باستخدام requestId) -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="bg-gray-50 font-bold text-gray-700 p-4 text-center"> الإجراءات </th>
+        <td mat-cell *matCellDef="let element" class="p-4 text-center space-x-2 space-x-reverse">
+
+          <button mat-flat-button class="bg-emerald-600 text-white hover:bg-emerald-700 px-4 py-1.5 rounded-lg text-sm font-medium transition"
+                  (click)="approveForm(element.requestId)">
+            موافقة
+          </button>
+
+          <button mat-flat-button class="bg-rose-600 text-white hover:bg-rose-700 px-4 py-1.5 rounded-lg text-sm font-medium transition"
+                  (click)="openRejectDialog(element.requestId)">
+            رفض
+          </button>
+
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-gray-50 transition-colors border-b border-gray-100"></tr>
+    </table>
+
+    <!-- استخدام @if الحديثة للتحقق من عدم وجود بيانات -->
+    @if (dataSource.data.length === 0) {
+      <div class="text-center py-12 text-gray-500 bg-white">
+        لا توجد طلبات معلمين متاحة حالياً.
+      </div>
+    }
+
+  </div>
+</div>
