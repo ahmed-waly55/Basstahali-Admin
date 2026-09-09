@@ -2,7 +2,6 @@
 
   <!-- Right Section: Sidebar Toggle & Welcome Text -->
   <div class="flex items-center gap-3">
-    <!-- زر التحكم بالسيدبار (يعمل على جميع الشاشات) -->
     <button mat-icon-button (click)="toggleSidebar.emit()"
             class="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-xl transition-all duration-200">
       <mat-icon>{{ isSidebarOpen ? 'menu_open' : 'menu' }}</mat-icon>
@@ -10,36 +9,92 @@
 
     <div class="hidden sm:flex flex-col text-right">
       <h1 class="text-sm font-bold text-slate-800 tracking-tight">لوحة التحكم الرئيسية</h1>
-      <span class="text-xs text-slate-400 font-medium">مرحباً بك مجدد {{userName}} ،  ✨</span>
+      <span class="text-xs text-slate-400 font-medium">مرحباً بك مجدداً {{userName}} ، ✨</span>
     </div>
   </div>
 
   <!-- Left Section: Actions & Profile -->
   <div class="flex items-center gap-2 md:gap-3">
 
-    <!-- Notifications -->
-    <button mat-icon-button [matMenuTriggerFor]="notificationsMenu"
-            class="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-xl relative transition-all duration-200"
-            matTooltip="الإشعارات">
-      <mat-icon class="transition-transform hover:scale-110">notifications_none</mat-icon>
-      <span class="absolute top-2.5 left-2.5 w-2 h-2 bg-rose-500 rounded-full ring-4 ring-white animate-pulse"></span>
-    </button>
+    <!-- Notifications Button & Bell -->
+    <div class="relative">
+      <button mat-icon-button [matMenuTriggerFor]="notificationsMenu"
+              class="w-10 h-10 rounded-xl bg-slate-50/80 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-slate-100 flex items-center justify-center transition-all duration-200 relative group"
+              matTooltip="الإشعارات">
+        <mat-icon class="transition-transform duration-300 group-hover:scale-110">notifications_none</mat-icon>
 
-    <mat-menu #notificationsMenu="matMenu" xPosition="after" class="mt-3 w-72 md:w-80 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-2">
-      <div class="px-3 py-2.5 border-b border-slate-50 flex justify-between items-center">
-        <span class="font-bold text-xs text-slate-700">التنبيهات والنشاطات</span>
-        <span class="text-[11px] text-indigo-600 font-semibold cursor-pointer hover:underline">تحديد الكل مقروء</span>
-      </div>
-      <div class="py-1">
-        <button mat-menu-item class="flex items-start gap-3 py-2.5 px-3 h-auto rounded-xl hover:bg-indigo-50/40 transition-colors">
-          <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-            <mat-icon class="text-sm">verified_user</mat-icon>
-          </div>
-          <div class="text-right">
-            <p class="text-xs font-semibold text-slate-700">تم اعتماد صلاحيات جديدة</p>
-            <span class="text-[11px] text-slate-400">منذ 10 دقائق</span>
-          </div>
+        <!-- شارة العدد (Badge) بتصميم مميز وناعم -->
+        @if (unreadCount() > 0) {
+          <span class="absolute -top-1 -right-1 px-1.5 py-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full ring-2 ring-white shadow-sm animate-pulse min-w-[20px] text-center">
+            {{ unreadCount() > 99 ? '+99' : unreadCount() }}
+          </span>
+        }
+      </button>
+    </div>
+
+    <!-- قائمة الإشعارات المُنسقة -->
+    <mat-menu #notificationsMenu="matMenu" xPosition="after" class="mt-3 w-80 md:w-96 rounded-2xl shadow-2xl shadow-slate-300/50 border border-slate-100 p-0 overflow-hidden bg-white">
+
+      <!-- الهيدر الخاص بالقائمة -->
+      <div class="px-4 py-3.5 bg-gradient-to-l from-slate-50 to-indigo-50/30 border-b border-slate-100 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-xs text-slate-800">التنبيهات والنشاطات</span>
+          @if (unreadCount() > 0) {
+            <span class="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs">
+              {{ unreadCount() }} جديد
+            </span>
+          }
+        </div>
+        <button (click)="onMarkAllAsRead(); $event.stopPropagation()" class="text-[11px] text-indigo-600 font-semibold hover:text-indigo-700 hover:underline bg-transparent border-none cursor-pointer transition-colors">
+          تحديد الكل مقروء
         </button>
+      </div>
+
+      <!-- جسم الإشعارات -->
+      <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
+        @if (notificationsList().length > 0) {
+          @for (notif of notificationsList(); track notif.id) {
+            <div (click)="onMarkAsRead(notif.id)"
+                 class="flex items-start gap-3.5 p-3.5 transition-all cursor-pointer hover:bg-slate-50 text-right relative group"
+                 [ngClass]="notif.isRead ? 'bg-white opacity-70' : 'bg-indigo-50/25'">
+
+              <!-- أيقونة الإشعار بتصميم ناعم -->
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-xs transition-transform group-hover:scale-105"
+                   [ngClass]="notif.isRead ? 'bg-slate-100 text-slate-400' : 'bg-indigo-100 text-indigo-600'">
+                <mat-icon class="text-base">
+                  {{ notif.isRead ? 'notifications_none' : 'notifications_active' }}
+                </mat-icon>
+              </div>
+
+              <!-- تفاصيل الإشعار -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-1">
+                  <p class="text-xs font-bold text-slate-800 truncate">
+                    {{ notif.title }}
+                  </p>
+                  @if (!notif.isRead) {
+                    <span class="w-2 h-2 rounded-full bg-indigo-600 shrink-0 shadow-xs animate-pulse"></span>
+                  }
+                </div>
+
+                <p class="text-[11px] text-slate-600 mt-1 leading-relaxed break-words">
+                  {{ notif.body }}
+                </p>
+
+                <span class="text-[10px] text-slate-400 block mt-1.5 font-medium">
+                  {{ notif.createdAt | date: 'medium' }}
+                </span>
+              </div>
+            </div>
+          }
+        } @else {
+          <div class="text-center py-10 text-slate-400 text-xs flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-1">
+              <mat-icon class="text-2xl">notifications_off</mat-icon>
+            </div>
+            <span class="font-medium text-slate-500">لا توجد إشعارات جديدة حالياً</span>
+          </div>
+        }
       </div>
     </mat-menu>
 
@@ -47,12 +102,9 @@
 
     <!-- User Profile Button -->
     <button class="flex items-center gap-2.5 pr-2 md:pr-3 pl-1.5 py-1.5 rounded-full bg-slate-50/80 hover:bg-indigo-600/10 border border-slate-100 transition-all duration-300 group" [matMenuTriggerFor]="userMenu">
-
       <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center ring-2 ring-white shadow-xs">
-  <i class="fa-solid fa-user text-xs"></i>
-</div>
-
-
+        <i class="fa-solid fa-user text-xs"></i>
+      </div>
       <div class="hidden md:flex flex-col text-right">
         <span class="text-xs font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{{userName}}</span>
         <span class="text-[10px] text-slate-400 font-medium">مدير عام</span>
@@ -61,11 +113,6 @@
     </button>
 
     <mat-menu #userMenu="matMenu" xPosition="after" class="mt-3 w-60 rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-2">
-      <!-- <div class="px-4 py-3 bg-slate-50/70 rounded-xl mb-1 text-right">
-        <p class="text-xs font-bold text-slate-800">{{userName}}</p>
-        <p class="text-[11px] text-slate-400 truncate mt-0.5">sara.admin@example.com</p>
-      </div> -->
-
       <button mat-menu-item class="flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 rounded-xl my-0.5 h-10">
         <mat-icon class="text-base text-slate-400">person_outline</mat-icon>
         <span class="text-xs font-medium">الملف الشخصي</span>

@@ -47,8 +47,20 @@ export class PayoutsManagementComponent implements OnInit {
   teacherPayouts = signal<any[]>([]);
   teachers = signal<any[]>([]);
 
-// أضف هذه الحقول في الـ Component لديك
-  displayedColumns: string[] = ['teacherName', 'phone', 'subjects', 'rate', 'sessions', 'status', 'actions'];
+  // حفظ معلومات الفترة الحالية القادمة من الـ API
+  payoutPeriodInfo = signal<{ from: string; to: string; count: number } | null>(null);
+
+  // أعمدة الجدول المحدثة (أضفنا عموداً جديداً للعمليات المالية الخاصة بالباي رول إذا رغبت، أو احتفظت بالأعمدة الحالية)
+  displayedColumns: string[] = [
+    'teacherName',
+    'phoneNumber',
+    'sessionCount',
+    'grossSalary',
+    'totalBonus',
+    'totalDeductions',
+    'netSalary',
+    'actions'
+  ];
 
   periodForm: FormGroup = this.fb.group({
     startDate: ['', Validators.required],
@@ -67,24 +79,34 @@ export class PayoutsManagementComponent implements OnInit {
     this.loadTeachers();
   }
 
-loadTeacherPayouts() {
-  this.payoutsService.getTeacherPayouts().subscribe((response: any) => {
-    if (response && response.success && response.data && response.data.items) {
-      this.teacherPayouts.set(response.data.items);
-      this.teachers.set(response.data.items);
-    }
-  });
-}
+  loadTeacherPayouts() {
+    this.payoutsService.getTeacherPayouts().subscribe({
+      next: (response: any) => {
+        if (response && response.success && response.data) {
+          this.payoutPeriodInfo.set({
+            from: response.data.from,
+            to: response.data.to,
+            count: response.data.count
+          });
+          const items = response.data.items || [];
+          this.teacherPayouts.set(items);
+        }
+      },
+      error: (err) => {
+        console.error('Error fetching teacher payouts', err);
+        Swal.fire('خطأ', 'فشل تحميل مستحقات المعلمين.', 'error');
+      }
+    });
+  }
 
   loadTeachers() {
     this.teacherService.getTeachers().subscribe({
-      next: (res) => {
-        const list = Array.isArray(res) ? res : (res.data?.items || res.data || res.items || []);
+      next: (res: any) => {
+        const list = Array.isArray(res) ? res : (res?.data?.items || res?.data || res?.items || []);
         this.teachers.set(list);
       },
       error: (err) => {
         console.error('Error fetching teachers', err);
-        Swal.fire('خطأ', 'حدث خطأ أثناء جلب قائمة المدرسين.', 'error');
       }
     });
   }
@@ -99,45 +121,185 @@ loadTeacherPayouts() {
       next: () => {
         Swal.fire('نجاح', 'تم إنشاء فترة الصرف بنجاح', 'success');
         this.periodForm.reset();
+        this.loadTeacherPayouts();
       },
       error: () => Swal.fire('خطأ', 'فشل إنشاء فترة الصرف', 'error')
     });
   }
 
-  onGeneratePeriod(periodId: string) {
+  // تنفيذ إجراء القبول (Approve) العام
+  onApproveAction(teacherId: string) {
     Swal.fire({
-      title: 'هل أنت متأكد؟',
-      text: 'سيتم توليد المستحقات للفترة المحددة',
-      icon: 'warning',
+      title: 'تأكيد الاعتماد',
+      text: 'هل أنت متأكد من رغبتك في اعتماد مستحقات هذا المعلم؟',
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'نعم، قم بالتوليد',
+      confirmButtonText: 'نعم، اعتماد',
       cancelButtonText: 'إلغاء'
     }).then((result) => {
       if (result.isConfirmed) {
-        this.payoutsService.generatePayoutPeriod(periodId).subscribe({
-          next: () => Swal.fire('تم!', 'تم توليد المستحقات بنجاح', 'success'),
-          error: () => Swal.fire('خطأ', 'فشل عملية التوليد', 'error')
+        this.payoutsService.updateTeacherPayoutAction(teacherId, 'approve').subscribe({
+          next: () => {
+            Swal.fire('تم!', 'تم اعتماد المستحقات بنجاح', 'success');
+            this.loadTeacherPayouts();
+          },
+          error: (err) => {
+            console.error('Error approving payout', err);
+            Swal.fire('خطأ', 'فشل اعتماد المستحقات', 'error');
+          }
         });
       }
     });
   }
 
-  onExecuteAction(payoutId: string, action: string) {
+  // تنفيذ إجراء الرفض (Reject) مع نافذة لطلب السبب
+  onRejectAction(teacherId: string) {
     Swal.fire({
-      title: 'تأكيد الإجراء',
-      text: `هل أنت متأكد من تنفيذ الإجراء (${action})؟`,
-      icon: 'question',
+      title: 'رفض المستحقات',
+      input: 'textarea',
+      inputLabel: 'سبب الرفض',
+      inputPlaceholder: 'اكتب سبب الرفض هنا...',
+      inputAttributes: {
+        'aria-label': 'اكتب سبب الرفض هنا'
+      },
       showCancelButton: true,
-      confirmButtonText: 'تأكيد',
-      cancelButtonText: 'إلغاء'
+      confirmButtonText: 'تأكيد الرفض',
+      cancelButtonText: 'إلغاء',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'يجب كتابة سبب الرفض!';
+        }
+        return null;
+      }
     }).then((result) => {
-      if (result.isConfirmed) {
-        this.payoutsService.updatePayoutAction(payoutId, action).subscribe({
+      if (result.isConfirmed && result.value) {
+        this.payoutsService.rejectTeacherPayout(teacherId, result.value).subscribe({
           next: () => {
-            Swal.fire('تم!', `تم تنفيذ الإجراء (${action}) بنجاح`, 'success');
+            Swal.fire('تم!', 'تم رفض المستحقات بنجاح', 'success');
             this.loadTeacherPayouts();
           },
-          error: () => Swal.fire('خطأ', 'فشل تنفيذ الإجراء', 'error')
+          error: (err) => {
+            console.error('Error rejecting payout', err);
+            Swal.fire('خطأ', 'فشل رفض المستحقات', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  // ==========================================================
+  // 🚀 استخدام الـ APIs الجديدة الخاصة بالـ Payroll في الـ UI
+  // ==========================================================
+
+  // 1. تعديل راتب المعلم (PUT: /api/v1/payroll/teachers/{teacherId})
+  onUpdateTeacherPayroll(teacher: any) {
+    Swal.fire({
+      title: 'تعديل راتب المعلم',
+      html: `
+        <div style="text-align: right; display: flex; flex-direction: column; gap: 10px;">
+          <label>من تاريخ:</label>
+          <input type="date" id="edit-from" class="swal2-input !w-full !m-0" value="${teacher.from || ''}">
+
+          <label>إلى تاريخ:</label>
+          <input type="date" id="edit-to" class="swal2-input !w-full !m-0" value="${teacher.to || ''}">
+
+          <label>عدد الحصص:</label>
+          <input type="number" id="edit-sessions" class="swal2-input !w-full !m-0" value="${teacher.sessionCount || 0}">
+
+          <label>سعر الحصة:</label>
+          <input type="number" id="edit-rate" class="swal2-input !w-full !m-0" value="${teacher.sessionRate || 0}">
+
+          <label>المكافأة:</label>
+          <input type="number" id="edit-bonus" class="swal2-input !w-full !m-0" value="${teacher.bonus || 0}">
+
+          <label>سبب المكافأة:</label>
+          <input type="text" id="edit-bonus-reason" class="swal2-input !w-full !m-0" placeholder="سبب المكافأة" value="${teacher.bonusReason || ''}">
+
+          <label>الخصم:</label>
+          <input type="number" id="edit-deduction" class="swal2-input !w-full !m-0" value="${teacher.deduction || 0}">
+
+          <label>سبب الخصم:</label>
+          <input type="text" id="edit-deduction-reason" class="swal2-input !w-full !m-0" placeholder="سبب الخصم" value="${teacher.deductionReason || ''}">
+
+          <label>ملاحظات:</label>
+          <textarea id="edit-notes" class="swal2-textarea !w-full !m-0" placeholder="ملاحظات إضافية">${teacher.notes || ''}</textarea>
+        </div>
+      `,
+      width: '600px',
+      showCancelButton: true,
+      confirmButtonText: 'حفظ التعديلات',
+      cancelButtonText: 'إلغاء',
+      preConfirm: () => {
+        return {
+          from: (document.getElementById('edit-from') as HTMLInputElement).value,
+          to: (document.getElementById('edit-to') as HTMLInputElement).value,
+          sessionCount: Number((document.getElementById('edit-sessions') as HTMLInputElement).value),
+          sessionRate: Number((document.getElementById('edit-rate') as HTMLInputElement).value),
+          bonus: Number((document.getElementById('edit-bonus') as HTMLInputElement).value),
+          bonusReason: (document.getElementById('edit-bonus-reason') as HTMLInputElement).value,
+          deduction: Number((document.getElementById('edit-deduction') as HTMLInputElement).value),
+          deductionReason: (document.getElementById('edit-deduction-reason') as HTMLInputElement).value,
+          notes: (document.getElementById('edit-notes') as HTMLTextAreaElement).value
+        };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.payoutsService.updateTeacherPayroll(teacher.teacherId, result.value).subscribe({
+          next: () => {
+            Swal.fire('نجاح', 'تم تحديث بيانات الرواتب بنجاح', 'success');
+            this.loadTeacherPayouts();
+          },
+          error: (err) => {
+            console.error('Error updating payroll', err);
+            Swal.fire('خطأ', 'فشل تحديث بيانات الرواتب', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  // 2. اعتماد راتب المعلم (POST: /api/v1/payroll/teachers/{teacherId}/approve)
+  onApproveTeacherPayrollWithData(teacher: any) {
+    Swal.fire({
+      title: 'اعتماد الراتب النهائي',
+      html: `
+        <div style="text-align: right; display: flex; flex-direction: column; gap: 10px;">
+          <label>من تاريخ:</label>
+          <input type="date" id="app-from" class="swal2-input !w-full !m-0" value="${teacher.from || ''}">
+
+          <label>إلى تاريخ:</label>
+          <input type="date" id="app-to" class="swal2-input !w-full !m-0" value="${teacher.to || ''}">
+
+          <label>المبلغ النهائي (Final Amount):</label>
+          <input type="number" id="app-amount" class="swal2-input !w-full !m-0" value="${teacher.netSalary || 0}">
+
+          <label>ملاحظات:</label>
+          <textarea id="app-notes" class="swal2-textarea !w-full !m-0" placeholder="ملاحظات الاعتماد"></textarea>
+        </div>
+      `,
+      width: '500px',
+      showCancelButton: true,
+      confirmButtonText: 'تأكيد الاعتماد',
+      cancelButtonText: 'إلغاء',
+      preConfirm: () => {
+        return {
+          from: (document.getElementById('app-from') as HTMLInputElement).value,
+          to: (document.getElementById('app-to') as HTMLInputElement).value,
+          finalAmount: Number((document.getElementById('app-amount') as HTMLInputElement).value),
+          notes: (document.getElementById('app-notes') as HTMLTextAreaElement).value
+        };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        this.payoutsService.approveTeacherPayroll(teacher.teacherId, result.value).subscribe({
+          next: () => {
+            Swal.fire('نجاح', 'تم اعتماد راتب المعلم بنجاح', 'success');
+            this.loadTeacherPayouts();
+          },
+          error: (err) => {
+            console.error('Error approving teacher payroll', err);
+            Swal.fire('خطأ', 'فشل اعتماد راتب المعلم', 'error');
+          }
         });
       }
     });
@@ -155,20 +317,6 @@ loadTeacherPayouts() {
         this.adjustmentForm.reset();
       },
       error: () => Swal.fire('خطأ', 'فشل إرسال طلب التعديل', 'error')
-    });
-  }
-
-  onDecideAdjustment(adjustmentId: string, status: string, approvedAmount: number, responseText: string) {
-    this.payoutsService.decidePayoutAdjustment(adjustmentId, {
-      status: status,
-      approvedAmount: approvedAmount,
-      adminResponse: responseText
-    }).subscribe({
-      next: () => {
-        Swal.fire('نجاح', 'تم تسجيل القرار بنجاح', 'success');
-        this.loadTeacherPayouts();
-      },
-      error: () => Swal.fire('خطأ', 'فشل تسجيل القرار', 'error')
     });
   }
 }

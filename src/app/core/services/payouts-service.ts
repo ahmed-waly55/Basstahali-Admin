@@ -69,7 +69,6 @@ export class PayoutsService {
     );
   }
 
-  // 6. اتخاذ قرار (موافقة/رفض) على تعديل مستحقات المعلم (POST)
   decidePayoutAdjustment(
     id: string,
     decisionData: { status: string; approvedAmount: number; adminResponse: string }
@@ -77,6 +76,59 @@ export class PayoutsService {
     return this.http.post<any>(
       `${environment.baseUrl}/api/v1/payout-adjustments/${id}/decision`,
       decisionData,
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  updateTeacherPayoutAction(id: string, action: string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.baseUrl}/api/v1/teacher-payouts/${id}/${action}`,
+      {},
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  rejectTeacherPayout(id: string, reason: string): Observable<any> {
+    return this.http.post<any>(
+      `${environment.baseUrl}/api/v1/teacher-payouts/${id}/reject`,
+      { reason: reason },
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  // ==========================================
+  // 🚀 الـ APIs الجديدة (Payroll)
+  // ==========================================
+
+  // 1. تعديل راتب/مستحقات المعلم (PUT)
+  updateTeacherPayroll(teacherId: string, payrollData: {
+    from: string;
+    to: string;
+    sessionCount: number;
+    sessionRate: number;
+    bonus: number;
+    bonusReason: string;
+    deduction: number;
+    deductionReason: string;
+    notes: string;
+  }): Observable<any> {
+    return this.http.put<any>(
+      `${environment.baseUrl}/api/v1/payroll/teachers/${teacherId}`,
+      payrollData,
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  // 2. اعتماد راتب/مستحقات المعلم (POST)
+  approveTeacherPayroll(teacherId: string, approvalData: {
+    from: string;
+    to: string;
+    finalAmount: number;
+    notes: string;
+  }): Observable<any> {
+    return this.http.post<any>(
+      `${environment.baseUrl}/api/v1/payroll/teachers/${teacherId}/approve`,
+      approvalData,
       { headers: this.getAuthHeaders() }
     );
   }
