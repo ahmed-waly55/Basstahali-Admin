@@ -1,9 +1,9 @@
 <div class="min-h-screen bg-slate-50 flex flex-col font-sans relative overflow-x-hidden" dir="rtl">
 
-  <!-- Mobile Sidebar Backdrop -->
+  <!-- خلفية معتمة تظهر فقط في الموبايل عند فتح السيدبار وعند الضغط عليها يغلق -->
   @if (isSidebarOpen) {
-    <div (click)="onToggleSidebar()"
-         class="fixed inset-0 bg-slate-900/25 backdrop-blur-2xs z-40 md:hidden transition-opacity">
+    <div (click)="closeSidebar()"
+         class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden transition-opacity cursor-pointer">
     </div>
   }
 
@@ -13,16 +13,15 @@
     <!-- Sidebar Component -->
     <app-sidebar
       [class.translate-x-full]="!isSidebarOpen"
-      [class.md:translate-x-full]="!isSidebarOpen"
-      class="fixed top-0 right-0 h-screen z-50 transition-all duration-300 ease-in-out">
+      class="fixed top-0 right-0 h-screen z-50 transition-transform duration-300 ease-in-out">
     </app-sidebar>
 
-    <!-- Main Content Area (يتغير الهامش بناءً على حالة السيدبار) -->
+    <!-- Main Content Area -->
     <div class="flex-1 flex flex-col min-w-0 transition-all duration-300 pt-16"
          [class.md:mr-64]="isSidebarOpen"
          [class.md:mr-0]="!isSidebarOpen">
 
-      <!-- Header Component (يتغير عرضه ومكان تثبيته بناءً على حالة السيدبار) -->
+      <!-- Header Component -->
       <app-header
         [isSidebarOpen]="isSidebarOpen"
         (toggleSidebar)="onToggleSidebar()"
