@@ -1,281 +1,484 @@
-<div class="p-4 md:p-6 max-w-6xl mx-auto font-sans" dir="rtl">
+<div class="p-4 md:p-6 max-w-7xl mx-auto font-sans" dir="rtl">
 
-  <!-- رأس الصفحة وزر إضافة مدرس جديد -->
-  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4 bg-white p-5 md:p-6 rounded-3xl shadow-xs border border-slate-200/80">
+  <!-- رأس الصفحة -->
+  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80">
     <div>
       <h1 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">إدارة المدرسين</h1>
-      <p class="text-xs md:text-sm text-slate-500 mt-1">عرض ومتابعة المدرسين مع خيارات التعديل والحذف</p>
+      <p class="text-xs md:text-sm text-slate-500 mt-1">متابعة المدرسين وإدارة الحسابات المؤرشفة والمحذوفة مع خيارات الاسترجاع</p>
     </div>
 
     <button mat-flat-button color="primary" (click)="openAddModal()"
       class="!bg-indigo-600 hover:!bg-indigo-700 !rounded-2xl !px-6 !py-3 font-bold flex items-center gap-2 shadow-lg shadow-indigo-100">
-      <mat-icon>add</mat-icon> إضافة مدرس جديد
+      <mat-icon>person_add</mat-icon> إضافة مدرس جديد
     </button>
   </div>
 
-  <!-- حاوية الجدول -->
-  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden">
-    <div class="p-4 md:p-6 border-b border-slate-100 flex justify-between items-center bg-white">
-      <h3 class="font-black text-base md:text-lg text-slate-900 flex items-center gap-2">
-        <i class="fa-solid fa-users-rectangle text-indigo-600"></i> قائمة المدرسين
-      </h3>
-      <span class="text-xs bg-indigo-50 text-indigo-600 font-bold px-3 py-1.5 rounded-xl">
-        الإجمالي: {{ dataSource.data.length }}
-      </span>
-    </div>
+  <!-- التابات (Tabs): المدرسين الحاليين والمحذوفين -->
+  <div class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden p-2 md:p-4">
+    <mat-tab-group animationDuration="200ms" class="custom-tabs">
 
-    <div class="overflow-x-auto w-full">
-      <table mat-table [dataSource]="dataSource" class="w-full text-right border-collapse min-w-[700px]">
+      <!-- ================= التاب 1: المدرسين الحاليين ================= -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-2 py-2 px-1">
+            <mat-icon class="!text-indigo-600">groups</mat-icon>
+            <span class="font-bold">المدرسين الحاليين</span>
+            <span class="bg-indigo-50 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-black">
+              {{ dataSource.data.length }}
+            </span>
+          </div>
+        </ng-template>
 
-        <!-- عمود الاسم -->
-        <ng-container matColumnDef="fullName">
-          <th mat-header-cell *matHeaderCellDef class="!py-4 !px-6 !text-slate-500 !font-bold !text-xs">الاسم</th>
-          <td mat-cell *matCellDef="let element" class="!py-4 !px-6 !font-bold !text-slate-900">
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xs shrink-0">
-                {{ element.fullName?.charAt(0) || 'T' }}
-              </div>
-              <span class="truncate max-w-[150px] md:max-w-xs">{{ element.fullName }}</span>
-            </div>
-          </td>
-        </ng-container>
+        <!-- حقل الفلترة والبحث السريع -->
+        <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+          <mat-form-field appearance="outline" class="w-full md:w-80 !mb-0 search-field" subscriptSizing="dynamic">
+            <mat-icon matPrefix class="text-slate-400">search</mat-icon>
+            <input matInput (keyup)="applyFilter($event)" placeholder="بحث بالاسم أو الهاتف...">
+          </mat-form-field>
+        </div>
 
-        <!-- عمود التليفون -->
-        <ng-container matColumnDef="phoneNumber">
-          <th mat-header-cell *matHeaderCellDef class="!py-4 !px-6 !text-slate-500 !font-bold !text-xs">التليفون</th>
-          <td mat-cell *matCellDef="let element" class="!py-4 !px-6 !text-slate-600" dir="ltr">
-            <span class="text-right inline-block">{{ element.phoneNumber }}</span>
-          </td>
-        </ng-container>
+        <!-- جدول المدرسين الحاليين -->
+        <div class="overflow-x-auto w-full">
+          <table mat-table [dataSource]="dataSource" matSort #activeSort="matSort" class="w-full text-right">
 
-        <!-- عمود الإجراءات -->
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef class="!py-4 !px-6 !text-center !text-slate-500 !font-bold !text-xs">الإجراءات</th>
-          <td mat-cell *matCellDef="let element" class="!py-4 !px-6 !text-center">
-            <div class="flex items-center justify-center gap-2">
-              <button mat-stroked-button color="primary" (click)="viewDetails(element)" class="!rounded-xl !text-xs">
-                <mat-icon>visibility</mat-icon> تفاصيل
-              </button>
-              <button mat-stroked-button color="accent" (click)="editTeacher(element)" class="!rounded-xl !text-xs">
-                <mat-icon>edit</mat-icon> تعديل
-              </button>
-              <button mat-stroked-button color="warn" (click)="deleteTeacher(element.id)" class="!rounded-xl !text-xs">
-                <mat-icon>delete</mat-icon> حذف
-              </button>
-            </div>
-          </td>
-        </ng-container>
+            <!-- الاسم -->
+            <ng-container matColumnDef="fullName">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="!py-4 !px-6 !text-slate-500 !font-bold !text-xs">الاسم</th>
+              <td mat-cell *matCellDef="let element" class="!py-4 !px-6 !font-bold !text-slate-900">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0 border border-indigo-100">
+                    {{ element.fullName?.charAt(0) || 'م' }}
+                  </div>
+                  <span class="truncate max-w-[180px] md:max-w-xs">{{ element.fullName }}</span>
+                </div>
+              </td>
+            </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-slate-50/50 transition"></tr>
+            <!-- رقم التليفون -->
+            <ng-container matColumnDef="phoneNumber">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="!py-4 !px-6 !text-slate-500 !font-bold !text-xs">رقم التليفون</th>
+              <td mat-cell *matCellDef="let element" class="!py-4 !px-6 !text-slate-600" dir="ltr">
+                <span class="inline-flex items-center gap-1.5 font-medium">
+                  <mat-icon class="!text-sm !w-4 !h-4 text-slate-400">phone</mat-icon>
+                  {{ element.phoneNumber }}
+                </span>
+              </td>
+            </ng-container>
 
-        <tr class="mat-row" *matNoDataRow>
-          <td colspan="3" class="text-center py-10 text-slate-400 font-medium">
-            <i class="fa-solid fa-folder-open mb-2 text-2xl block opacity-50"></i>
-            لا توجد بيانات متاحة للمدرسين حالياً
-          </td>
-        </tr>
-      </table>
-    </div>
+            <!-- حالة المدرس -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="!py-4 !px-6 !text-slate-500 !font-bold !text-xs">الحالة</th>
+              <td mat-cell *matCellDef="let element" class="!py-4 !px-6">
+                <span [ngClass]="{
+                  'bg-emerald-50 text-emerald-600 border-emerald-200': element.status === 'Active',
+                  'bg-amber-50 text-amber-600 border-amber-200': element.status === 'Inactive',
+                  'bg-rose-50 text-rose-600 border-rose-200': element.status === 'Suspended'
+                }" class="px-3 py-1 rounded-full text-xs font-bold border inline-flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full" [ngClass]="{
+                    'bg-emerald-500': element.status === 'Active',
+                    'bg-amber-500': element.status === 'Inactive',
+                    'bg-rose-500': element.status === 'Suspended'
+                  }"></span>
+                  {{ element.status === 'Active' ? 'نشط' : (element.status === 'Inactive' ? 'غير نشط' : 'موقوف') }}
+                </span>
+              </td>
+            </ng-container>
 
-    <!-- الـ Paginator يعمل بشكل سليم -->
-    <mat-paginator [pageSizeOptions]="[5, 10, 20]" showFirstLastButtons class="!bg-transparent border-t border-slate-100 dir-ltr text-right !px-2"></mat-paginator>
+            <!-- الإجراءات -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="!py-4 !px-6 !text-center !text-slate-500 !font-bold !text-xs">الإجراءات</th>
+              <td mat-cell *matCellDef="let element" class="!py-4 !px-6 !text-center">
+                <div class="flex items-center justify-center gap-1.5">
+                  <button mat-icon-button (click)="viewDetails(element)" matTooltip="عرض التفاصيل" class="!text-indigo-600 hover:!bg-indigo-50">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="editTeacher(element)" matTooltip="تعديل" class="!text-amber-600 hover:!bg-amber-50">
+                    <mat-icon>edit</mat-icon>
+                  </button>
+                  <button mat-icon-button (click)="deleteTeacher(element.id)" matTooltip="حذف إلى الأرشيف" class="!text-rose-600 hover:!bg-rose-50">
+                    <mat-icon>delete_outline</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-slate-50/60 transition"></tr>
+
+            <tr class="mat-row" *matNoDataRow>
+              <td [attr.colspan]="displayedColumns.length" class="text-center py-12 text-slate-400">
+                <mat-icon class="!w-12 !h-12 !text-4xl block mx-auto mb-2 text-slate-300">search_off</mat-icon>
+                <p class="font-bold text-sm">لا توجد سجلات تطابق البحث أو القائمة فارغة</p>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <mat-paginator #activePaginator [pageSizeOptions]="[5, 10, 25]" showFirstLastButtons class="!bg-transparent border-t border-slate-100"></mat-paginator>
+      </mat-tab>
+
+      <!-- ================= التاب 2: الحسابات المحذوفة (المؤرشفة) ================= -->
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <div class="flex items-center gap-2 py-2 px-1">
+            <mat-icon class="!text-rose-500">archive</mat-icon>
+            <span class="font-bold">الحسابات المحذوفة (المؤرشفة)</span>
+            <span class="bg-rose-50 text-rose-600 text-xs px-2.5 py-0.5 rounded-full font-black">
+              {{ archivedDataSource.data.length }}
+            </span>
+          </div>
+        </ng-template>
+
+        <!-- حقل الفلترة للحسابات المؤرشفة -->
+        <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+          <mat-form-field appearance="outline" class="w-full md:w-80 !mb-0 search-field" subscriptSizing="dynamic">
+            <mat-icon matPrefix class="text-slate-400">search</mat-icon>
+            <input matInput (keyup)="applyFilter($event, true)" placeholder="بحث في الحسابات المؤرشفة...">
+          </mat-form-field>
+        </div>
+
+        <!-- جدول المدرسين المحذوفين -->
+        <div class="overflow-x-auto w-full">
+          <table mat-table [dataSource]="archivedDataSource" matSort #archivedSort="matSort" class="w-full text-right">
+
+            <!-- الاسم -->
+            <ng-container matColumnDef="fullName">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="!py-4 !px-6 !text-slate-500 !font-bold !text-xs">الاسم</th>
+              <td mat-cell *matCellDef="let element" class="!py-4 !px-6 !font-bold text-slate-700">
+                <div class="flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-black text-sm shrink-0 border border-rose-100">
+                    {{ element.fullName?.charAt(0) || 'م' }}
+                  </div>
+                  <span>{{ element.fullName }}</span>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- رقم التليفون -->
+            <ng-container matColumnDef="phoneNumber">
+              <th mat-header-cell *matHeaderCellDef mat-sort-header class="!py-4 !px-6 !text-slate-500 !font-bold !text-xs">رقم التليفون</th>
+              <td mat-cell *matCellDef="let element" class="!py-4 !px-6 text-slate-500" dir="ltr">
+                {{ element.phoneNumber }}
+              </td>
+            </ng-container>
+
+            <!-- الحالة -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef class="!py-4 !px-6 !text-slate-500 !font-bold !text-xs">الحالة</th>
+              <td mat-cell *matCellDef="let element" class="!py-4 !px-6">
+                <span class="bg-rose-50 text-rose-600 border border-rose-200 px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> مؤرشف / محذوف
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- الإجراءات (زر استرجاع الحساب) -->
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef class="!py-4 !px-6 !text-center !text-slate-500 !font-bold !text-xs">الإجراءات</th>
+              <td mat-cell *matCellDef="let element" class="!py-4 !px-6 !text-center">
+                <div class="flex items-center justify-center gap-2">
+                  <button mat-stroked-button color="primary" (click)="restoreTeacher(element.id)"
+                    class="!rounded-xl !text-xs !border-emerald-500 !text-emerald-600 hover:!bg-emerald-50">
+                    <mat-icon class="!text-sm">settings_backup_restore</mat-icon> استرجاع الحساب
+                  </button>
+                  <button mat-icon-button (click)="viewDetails(element)" matTooltip="عرض التفاصيل" class="!text-indigo-600 hover:!bg-indigo-50">
+                    <mat-icon>visibility</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="archivedDisplayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: archivedDisplayedColumns;" class="hover:bg-slate-50/60 transition"></tr>
+
+            <tr class="mat-row" *matNoDataRow>
+              <td [attr.colspan]="archivedDisplayedColumns.length" class="text-center py-12 text-slate-400">
+                <mat-icon class="!w-12 !h-12 !text-4xl block mx-auto mb-2 text-slate-300">inventory_2</mat-icon>
+                <p class="font-bold text-sm">سلة المحذوفات فارغة، لا يوجد مدرسين مؤرشفين</p>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <mat-paginator #archivedPaginator [pageSizeOptions]="[5, 10, 25]" showFirstLastButtons class="!bg-transparent border-t border-slate-100"></mat-paginator>
+      </mat-tab>
+
+    </mat-tab-group>
   </div>
 
 </div>
 
 
 <!-- ================================================================= -->
-<!-- نافذة الإضافة والتعديل (Modal) منفصلة تماماً في ملف الـ HTML            -->
+<!-- مودال الإضافة والتعديل باستخدام Angular Material Dialog             -->
 <!-- ================================================================= -->
-@if (isModalOpen) {
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-    <div class="bg-white rounded-3xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]" dir="rtl">
+<ng-template #formDialogTemplate>
+  <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100" dir="rtl">
+    <h2 class="text-lg font-black text-slate-900 m-0 flex items-center gap-2">
+      <mat-icon [ngClass]="isEditing ? 'text-amber-500' : 'text-indigo-600'">
+        {{ isEditing ? 'edit_square' : 'person_add' }}
+      </mat-icon>
+      {{ isEditing ? 'تعديل بيانات المدرس' : 'إضافة مدرس جديد' }}
+    </h2>
+    <button mat-icon-button (click)="closeModal()" class="text-slate-400 hover:text-rose-500">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
-      <!-- رأس المودال -->
-      <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 shrink-0">
-        <h2 class="text-lg font-black text-slate-900 m-0 flex items-center gap-2">
-          <i class="fa-solid" [ngClass]="isEditing ? 'fa-pen-to-square text-amber-500' : 'fa-user-plus text-indigo-600'"></i>
-          {{ isEditing ? 'تعديل بيانات المدرس' : 'إضافة مدرس جديد' }}
-        </h2>
-        <button (click)="closeModal()" class="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 hover:text-rose-500 flex items-center justify-center transition cursor-pointer">
-          <i class="fa-solid fa-xmark text-base"></i>
-        </button>
+  <mat-dialog-content class="!p-6 !max-h-[75vh]" dir="rtl">
+    <form [formGroup]="teacherForm" class="space-y-6">
+
+      <!-- البيانات الأساسية -->
+      <div>
+        <h3 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">البيانات الأساسية</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>الاسم الكامل</mat-label>
+            <input matInput formControlName="fullName" placeholder="أدخل اسم المدرس">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>رقم التليفون</mat-label>
+            <input matInput formControlName="phoneNumber" placeholder="01012345678">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>رقم الواتساب</mat-label>
+            <input matInput formControlName="whatsApp" placeholder="01012345678">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full" *ngIf="isEditing">
+            <mat-label>حالة الحساب</mat-label>
+            <mat-select formControlName="status">
+              <mat-option value="Active">نشط</mat-option>
+              <mat-option value="Inactive">غير نشط</mat-option>
+              <mat-option value="Suspended">موقوف</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
       </div>
 
-      <!-- محتوى النموذج -->
-      <div class="p-6 overflow-y-auto flex-1 custom-scrollbar">
-        <form [formGroup]="teacherForm" class="space-y-6">
+      <!-- بيانات الدخول (في الإضافة فقط) -->
+      <div *ngIf="!isEditing">
+        <h3 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">بيانات الدخول</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>اسم المستخدم (Username)</mat-label>
+            <input matInput formControlName="userName" placeholder="username">
+          </mat-form-field>
 
-          <!-- البيانات الأساسية -->
-          <div>
-            <h3 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">البيانات الأساسية</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>الاسم الكامل</mat-label>
-                <input matInput formControlName="fullName" placeholder="أدخل اسم المدرس">
-              </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>كلمة المرور</mat-label>
+            <input matInput type="password" formControlName="password" placeholder="••••••••">
+          </mat-form-field>
+        </div>
+      </div>
 
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>رقم التليفون</mat-label>
-                <input matInput formControlName="phoneNumber" placeholder="01012345678">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>رقم الواتساب</mat-label>
-                <input matInput formControlName="whatsApp" placeholder="01012345678">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="w-full" *ngIf="isEditing">
-                <mat-label>حالة الحساب</mat-label>
-                <mat-select formControlName="status">
-                  <mat-option value="Active">نشط</mat-option>
-                  <mat-option value="Inactive">غير نشط</mat-option>
-                  <mat-option value="Suspended">موقوف</mat-option>
-                </mat-select>
-              </mat-form-field>
-            </div>
-          </div>
-
-          <!-- بيانات الدخول (تظهر في الإضافة فقط) -->
-          <div *ngIf="!isEditing">
-            <h3 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">بيانات الدخول</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>اسم المستخدم (Username)</mat-label>
-                <input matInput formControlName="userName" placeholder="username">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>كلمة المرور</mat-label>
-                <input matInput type="password" formControlName="password" placeholder="••••••••">
-              </mat-form-field>
-            </div>
-          </div>
-
-          <!-- المواد والمناهج -->
-          <div>
-            <h3 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">المواد والمناهج الدراسية</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              <!-- المواد مع Select All -->
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>المواد الدراسية</mat-label>
-                <mat-select formControlName="subjectIds" multiple>
-                  <div class="flex justify-between items-center px-4 py-2 bg-indigo-50/50 border-b border-indigo-100 mb-1 sticky top-0 z-10" (click)="$event.stopPropagation()">
-                    <span class="text-xs font-bold text-slate-500">خيارات سريعة:</span>
-                    <div class="flex gap-2">
-                      <button type="button" (click)="selectAll('subjectIds', subjectsList); $event.stopPropagation()" class="text-indigo-600 text-xs font-bold">تحديد الكل</button>
-                      <button type="button" (click)="deselectAll('subjectIds'); $event.stopPropagation()" class="text-rose-500 text-xs font-bold">إلغاء</button>
-                    </div>
-                  </div>
-                  <mat-option *ngFor="let sub of subjectsList" [value]="sub.id">{{ sub.nameAr || sub.nameEn }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <!-- المناهج مع Select All -->
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>المناهج الدراسية</mat-label>
-                <mat-select formControlName="curriculumIds" multiple>
-                  <div class="flex justify-between items-center px-4 py-2 bg-indigo-50/50 border-b border-indigo-100 mb-1 sticky top-0 z-10" (click)="$event.stopPropagation()">
-                    <span class="text-xs font-bold text-slate-500">خيارات سريعة:</span>
-                    <div class="flex gap-2">
-                      <button type="button" (click)="selectAll('curriculumIds', curriculaList); $event.stopPropagation()" class="text-indigo-600 text-xs font-bold">تحديد الكل</button>
-                      <button type="button" (click)="deselectAll('curriculumIds'); $event.stopPropagation()" class="text-rose-500 text-xs font-bold">إلغاء</button>
-                    </div>
-                  </div>
-                  <mat-option *ngFor="let cur of curriculaList" [value]="cur.id">{{ cur.nameAr || cur.nameEn }}</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-            </div>
-          </div>
-
-          <!-- أسعار المراحل الدراسية (FormArray) -->
-          <div>
-            <div class="flex justify-between items-center mb-3">
-              <h3 class="text-xs font-bold text-slate-400 m-0 uppercase tracking-wider">أسعار المراحل الدراسية</h3>
-              <button type="button" (click)="addStageRate()" class="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer">
-                <i class="fa-solid fa-plus ml-1"></i> إضافة مرحلة
-              </button>
-            </div>
-
-            <div formArrayName="stageRates" class="space-y-3">
-              <div *ngFor="let stage of stageRatesControls.controls; let i = index" [formGroupName]="i"
-                   class="flex flex-col md:flex-row gap-3 items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
-
-                <mat-form-field appearance="outline" class="w-full md:w-1/3 !mb-0">
-                  <mat-label>المرحلة</mat-label>
-                  <mat-select formControlName="gradeLevelId">
-                    <mat-option *ngFor="let grade of gradeLevelsList" [value]="grade.id">{{ grade.nameAr || grade.nameEn }}</mat-option>
-                  </mat-select>
-                </mat-form-field>
-
-                <mat-form-field appearance="outline" class="w-full md:w-1/3 !mb-0">
-                  <mat-label>السعر</mat-label>
-                  <input matInput type="number" formControlName="rate">
-                </mat-form-field>
-
-                <mat-form-field appearance="outline" class="w-full md:w-1/4 !mb-0">
-                  <mat-label>العملة</mat-label>
-                  <input matInput formControlName="currency">
-                </mat-form-field>
-
-                <button type="button" (click)="removeStageRate(i)" class="w-10 h-10 rounded-xl bg-white text-rose-500 border border-rose-100 flex items-center justify-center hover:bg-rose-50 cursor-pointer">
-                  <i class="fa-solid fa-trash-can"></i>
-                </button>
+      <!-- المواد والمناهج -->
+      <div>
+        <h3 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">المواد والمناهج الدراسية</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>المواد الدراسية</mat-label>
+            <mat-select formControlName="subjectIds" multiple>
+              <div class="flex justify-between items-center px-4 py-2 bg-indigo-50/70 border-b border-indigo-100 mb-1 sticky top-0 z-10" (click)="$event.stopPropagation()">
+                <span class="text-xs font-bold text-slate-600">خيارات سريعة:</span>
+                <div class="flex gap-2">
+                  <button type="button" (click)="selectAll('subjectIds', subjectsList); $event.stopPropagation()" class="text-indigo-600 text-xs font-bold hover:underline">تحديد الكل</button>
+                  <button type="button" (click)="deselectAll('subjectIds'); $event.stopPropagation()" class="text-rose-500 text-xs font-bold hover:underline">إلغاء</button>
+                </div>
               </div>
-            </div>
-          </div>
+              <mat-option *ngFor="let sub of subjectsList" [value]="sub.id">{{ sub.nameAr || sub.nameEn }}</mat-option>
+            </mat-select>
+          </mat-form-field>
 
-          <!-- البيانات المالية وطرق الدفع -->
-          <div>
-            <h3 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">البيانات المالية وطرق الدفع</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>سعر الجلسة الافتراضي</mat-label>
-                <input matInput type="number" formControlName="defaultPerSessionRate">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>العملة الافتراضية</mat-label>
-                <input matInput formControlName="defaultCurrency">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="w-full">
-                <mat-label>طريقة الدفع المفضلة</mat-label>
-                <mat-select formControlName="preferredPayoutMethod">
-                  <mat-option value="EWallet">محفظة إلكترونية</mat-option>
-                  <mat-option value="InstaPay">إنستاباي</mat-option>
-                  <mat-option value="BankTransfer">تحويل بنكي</mat-option>
-                  <mat-option value="Cash">كاش</mat-option>
-                </mat-select>
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="w-full" *ngIf="teacherForm.get('preferredPayoutMethod')?.value === 'EWallet'">
-                <mat-label>رقم المحفظة</mat-label>
-                <input matInput formControlName="eWalletNumber">
-              </mat-form-field>
-
-              <mat-form-field appearance="outline" class="w-full" *ngIf="teacherForm.get('preferredPayoutMethod')?.value === 'InstaPay'">
-                <mat-label>معرف إنستاباي</mat-label>
-                <input matInput formControlName="instaPayIdentifier">
-              </mat-form-field>
-            </div>
-          </div>
-
-        </form>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>المناهج الدراسية</mat-label>
+            <mat-select formControlName="curriculumIds" multiple>
+              <div class="flex justify-between items-center px-4 py-2 bg-indigo-50/70 border-b border-indigo-100 mb-1 sticky top-0 z-10" (click)="$event.stopPropagation()">
+                <span class="text-xs font-bold text-slate-600">خيارات سريعة:</span>
+                <div class="flex gap-2">
+                  <button type="button" (click)="selectAll('curriculumIds', curriculaList); $event.stopPropagation()" class="text-indigo-600 text-xs font-bold hover:underline">تحديد الكل</button>
+                  <button type="button" (click)="deselectAll('curriculumIds'); $event.stopPropagation()" class="text-rose-500 text-xs font-bold hover:underline">إلغاء</button>
+                </div>
+              </div>
+              <mat-option *ngFor="let cur of curriculaList" [value]="cur.id">{{ cur.nameAr || cur.nameEn }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
       </div>
 
-      <!-- أزرار الحفظ والإلغاء -->
-      <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 shrink-0">
-        <button (click)="closeModal()" class="px-5 py-2.5 rounded-xl font-bold text-slate-600 hover:bg-slate-200/60 transition cursor-pointer">إلغاء</button>
-        <button (click)="submitTeacher()" [disabled]="isLoading" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition flex items-center gap-2 cursor-pointer disabled:opacity-50">
-          <span *ngIf="isLoading" class="fa-solid fa-spinner fa-spin"></span>
-          {{ isEditing ? 'حفظ التعديلات' : 'إضافة المدرس' }}
-        </button>
+      <!-- أسعار المراحل الدراسية -->
+      <div>
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-xs font-bold text-slate-400 m-0 uppercase tracking-wider">أسعار المراحل الدراسية</h3>
+          <button type="button" mat-stroked-button color="primary" (click)="addStageRate()" class="!rounded-xl !text-xs">
+            <mat-icon>add</mat-icon> إضافة مرحلة
+          </button>
+        </div>
+
+        <div formArrayName="stageRates" class="space-y-3">
+          <div *ngFor="let stage of stageRatesControls.controls; let i = index" [formGroupName]="i"
+               class="flex flex-col md:flex-row gap-3 items-center bg-slate-50 p-3 rounded-2xl border border-slate-100">
+            <mat-form-field appearance="outline" class="w-full md:w-1/3 !mb-0" subscriptSizing="dynamic">
+              <mat-label>المرحلة</mat-label>
+              <mat-select formControlName="gradeLevelId">
+                <mat-option *ngFor="let grade of gradeLevelsList" [value]="grade.id">{{ grade.nameAr || grade.nameEn }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full md:w-1/3 !mb-0" subscriptSizing="dynamic">
+              <mat-label>السعر</mat-label>
+              <input matInput type="number" formControlName="rate">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full md:w-1/4 !mb-0" subscriptSizing="dynamic">
+              <mat-label>العملة</mat-label>
+              <input matInput formControlName="currency">
+            </mat-form-field>
+
+            <button mat-icon-button color="warn" (click)="removeStageRate(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- البيانات المالية وطرق الدفع -->
+      <div>
+        <h3 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">البيانات المالية وطرق الدفع</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>سعر الجلسة الافتراضي</mat-label>
+            <input matInput type="number" formControlName="defaultPerSessionRate">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>العملة الافتراضية</mat-label>
+            <input matInput formControlName="defaultCurrency">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>طريقة الدفع المفضلة</mat-label>
+            <mat-select formControlName="preferredPayoutMethod">
+              <mat-option value="EWallet">محفظة إلكترونية</mat-option>
+              <mat-option value="InstaPay">إنستاباي</mat-option>
+              <mat-option value="BankTransfer">تحويل بنكي</mat-option>
+              <mat-option value="Cash">كاش</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full" *ngIf="teacherForm.get('preferredPayoutMethod')?.value === 'EWallet'">
+            <mat-label>رقم المحفظة</mat-label>
+            <input matInput formControlName="eWalletNumber">
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="w-full" *ngIf="teacherForm.get('preferredPayoutMethod')?.value === 'InstaPay'">
+            <mat-label>معرف إنستاباي</mat-label>
+            <input matInput formControlName="instaPayIdentifier">
+          </mat-form-field>
+        </div>
+      </div>
+
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="!px-6 !py-4 !bg-slate-50 border-t border-slate-100" dir="rtl">
+    <button mat-button (click)="closeModal()" class="!rounded-xl font-bold !text-slate-600">إلغاء</button>
+    <button mat-flat-button color="primary" (click)="submitTeacher()" [disabled]="isLoading"
+      class="!bg-indigo-600 hover:!bg-indigo-700 !rounded-xl !px-6 font-bold">
+      {{ isEditing ? 'حفظ التعديلات' : 'إضافة المدرس' }}
+    </button>
+  </mat-dialog-actions>
+</ng-template>
+
+
+<!-- ================================================================= -->
+<!-- مودال عرض التفاصيل باستخدام Angular Material Dialog                -->
+<!-- ================================================================= -->
+<ng-template #detailsDialogTemplate>
+  <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100" dir="rtl">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+        <mat-icon>person</mat-icon>
+      </div>
+      <div>
+        <h3 class="font-black text-slate-900 text-base m-0">تفاصيل المدرس</h3>
+        <span class="text-indigo-600 font-bold text-xs">{{ selectedTeacher?.fullName }}</span>
+      </div>
+    </div>
+    <button mat-icon-button mat-dialog-close class="text-slate-400 hover:text-slate-600">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="!p-6 !max-h-[75vh]" dir="rtl" *ngIf="selectedTeacher">
+    <div class="space-y-4">
+
+      <!-- حالة المدرس -->
+      <div class="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
+        <span class="text-slate-500 text-xs font-bold">حالة الحساب:</span>
+        <span [ngClass]="{
+          'bg-emerald-50 text-emerald-600 border-emerald-200': selectedTeacher.status === 'Active',
+          'bg-amber-50 text-amber-600 border-amber-200': selectedTeacher.status === 'Inactive',
+          'bg-rose-50 text-rose-600 border-rose-200': selectedTeacher.status === 'Suspended' || selectedTeacher.isDeleted
+        }" class="px-3 py-1 rounded-full text-xs font-bold border">
+          {{ selectedTeacher.status === 'Active' ? 'نشط' : (selectedTeacher.status === 'Inactive' ? 'غير نشط' : 'موقوف') }}
+        </span>
+      </div>
+
+      <!-- الشبكة الرئيسية للبيانات -->
+      <div class="grid grid-cols-2 gap-3.5 bg-slate-50/80 p-4 rounded-2xl border border-slate-100 text-xs">
+        <div><span class="text-slate-400 block mb-1">اسم المستخدم:</span><strong class="text-slate-800" dir="ltr">{{ selectedTeacher.userName || 'غير متوفر' }}</strong></div>
+        <div><span class="text-slate-400 block mb-1">حساب الدفع:</span><strong class="text-slate-800" dir="ltr">{{ selectedTeacher.maskedPayoutDestination || 'غير متوفر' }}</strong></div>
+        <div><span class="text-slate-400 block mb-1">رقم التليفون:</span><strong class="text-slate-800" dir="ltr">{{ selectedTeacher.phoneNumber || 'غير متوفر' }}</strong></div>
+        <div><span class="text-slate-400 block mb-1">رقم الواتساب:</span><strong class="text-slate-800" dir="ltr">{{ selectedTeacher.whatsApp || 'غير متوفر' }}</strong></div>
+      </div>
+
+      <!-- سعر الجلسة الافتراضي -->
+      <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-100 flex justify-between items-center text-xs">
+        <span class="text-slate-500 font-medium">سعر الجلسة الافتراضي:</span>
+        <span class="font-bold text-indigo-600 text-sm" dir="ltr">{{ selectedTeacher.defaultPerSessionRate ?? 0 }} {{ selectedTeacher.defaultCurrency || 'EGP' }}</span>
+      </div>
+
+      <!-- المواد والمناهج -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
+          <span class="text-slate-400 text-xs block mb-2 font-bold">المواد الدراسية:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <span *ngFor="let s of selectedTeacher.subjects" class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-xl text-xs font-bold">
+              {{ s.nameAr || s.nameEn }}
+            </span>
+            <span *ngIf="!selectedTeacher.subjects?.length" class="text-slate-400 text-xs">لا توجد مواد</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-100">
+          <span class="text-slate-400 text-xs block mb-2 font-bold">المناهج الدراسية:</span>
+          <div class="flex flex-wrap gap-1.5">
+            <span *ngFor="let c of selectedTeacher.curricula" class="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-xl text-xs font-bold">
+              {{ c.nameAr || c.nameEn }}
+            </span>
+            <span *ngIf="!selectedTeacher.curricula?.length" class="text-slate-400 text-xs">لا توجد مناهج</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- أسعار المراحل الدراسية -->
+      <div class="bg-slate-50/80 p-4 rounded-2xl border border-slate-100" *ngIf="selectedTeacher.stageRates?.length">
+        <span class="text-slate-400 text-xs block mb-2 font-bold">أسعار المراحل الدراسية:</span>
+        <div class="space-y-1.5">
+          <div *ngFor="let sr of selectedTeacher.stageRates" class="text-xs bg-white p-2.5 rounded-xl border border-slate-100 flex justify-between items-center">
+            <span class="font-medium text-slate-800">{{ sr.gradeLevelName }}</span>
+            <span class="font-bold text-indigo-600" dir="ltr">{{ sr.rate }} {{ sr.currency }}</span>
+          </div>
+        </div>
       </div>
 
     </div>
-  </div>
-}
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="!px-6 !py-3 !bg-slate-50 border-t border-slate-100" dir="rtl">
+    <button mat-button mat-dialog-close class="!rounded-xl font-bold !text-slate-600">إغلاق</button>
+  </mat-dialog-actions>
+</ng-template>
