@@ -8,7 +8,7 @@ import { environment } from '../../../environments/environment';
 })
 export class AnalyticsService {
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   /**
    * دالة مساعدة لإنشاء الهيدر وإرفاق التوكن من الـ LocalStorage
@@ -108,34 +108,51 @@ export class AnalyticsService {
   }
 
 
-    getStudentsProfitReports(): Observable<any> {
+  getStudentsProfitReports(): Observable<any> {
     const headers = this.getHeaders();
     return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/students`, { headers });
   }
 
-    getSubjectsProfitReports(): Observable<any> {
+  getSubjectsProfitReports(): Observable<any> {
     const headers = this.getHeaders();
     return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/subjects`, { headers });
   }
 
 
-    getCoursesProfitReports(): Observable<any> {
+  getCoursesProfitReports(): Observable<any> {
     const headers = this.getHeaders();
     return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/courses`, { headers });
   }
 
 
-    getPeriodsProfitReports(): Observable<any> {
+  getPeriodsProfitReports(): Observable<any> {
     const headers = this.getHeaders();
     return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/periods`, { headers });
   }
 
 
 
-    getcurriculaProfitReports(): Observable<any> {
+  getcurriculaProfitReports(): Observable<any> {
     const headers = this.getHeaders();
     return this.http.get<any>(`${environment.baseUrl}/api/v1/financial-analysis/profit-reports/curricula`, { headers });
   }
 
+
+  // home
+
+    getHomeUsers(): Observable<any> {
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/dashboards/statistics`, { headers });
+  }
+
+  getRevenueExpenses():Observable<any>{
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/dashboards/revenue-expenses/monthly`, { headers });
+  }
+
+  getRecentOperations():Observable<any>{
+    const headers = this.getHeaders();
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/dashboards/recent-operations`, { headers });
+  }
 
 }

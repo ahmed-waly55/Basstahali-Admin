@@ -1,162 +1,418 @@
-<div dir="rtl" class="min-h-screen bg-slate-50 p-6 font-sans">
+<div dir="rtl" class="min-h-screen bg-slate-50 p-3 sm:p-6 font-sans">
 
   <!-- رأس الصفحة -->
-  <header class="mb-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-    <h1 class="text-2xl font-black text-slate-800">إدارة رواتب ومستحقات المعلمين</h1>
-    <p class="text-sm text-slate-500 mt-1">لوحة التحكم المركزية للفترات والمستحقات المالية</p>
+  <header class="mb-5 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-xl sm:text-2xl font-black text-slate-800">إدارة دورة رواتب المعلمين</h1>
+        <span class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold">نظام الرواتب v1</span>
+      </div>
+      @if (periodInfo()) {
+        <p class="text-xs sm:text-sm text-slate-500 mt-1">
+          الفترة الحالية:
+          <strong class="text-indigo-600">{{ periodInfo()?.from }}</strong> إلى <strong class="text-indigo-600">{{ periodInfo()?.to }}</strong>
+          (المعلمين: {{ periodInfo()?.count }})
+        </p>
+      }
+    </div>
+
+    <!-- التبديل بين كشوف الرواتب التفاعلية والملخص المالي العام -->
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <div class="bg-slate-100 p-1 rounded-xl flex items-center w-full sm:w-auto text-xs font-bold">
+        <button type="button"
+                class="px-3 py-1.5 rounded-lg transition"
+                [ngClass]="viewMode() === 'payouts' ? 'bg-white shadow text-indigo-600' : 'text-slate-600'"
+                (click)="viewMode.set('payouts'); loadData()">
+          كشوف الرواتب الرسمية
+        </button>
+        <button type="button"
+                class="px-3 py-1.5 rounded-lg transition"
+                [ngClass]="viewMode() === 'summary' ? 'bg-white shadow text-indigo-600' : 'text-slate-600'"
+                (click)="viewMode.set('summary'); loadData()">
+          الملخص المالي الشامل
+        </button>
+      </div>
+
+      <button mat-icon-button (click)="loadData()" matTooltip="تحديث البيانات">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
   </header>
 
-  <!-- التابات (Tabs) لتنظيم الواجهة -->
-  <mat-tab-group animationDuration="0ms" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+  <!-- كروت الإحصائيات -->
+  <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
+    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+        <mat-icon>people</mat-icon>
+      </div>
+      <div>
+        <span class="text-[11px] text-slate-400 block font-medium">عدد المعلمين بالكشف</span>
+        <span class="text-base sm:text-lg font-black text-slate-800">{{ payouts().length }} معلم</span>
+      </div>
+    </div>
 
-    <!-- التاب الأول: جدول مستحقات المعلمين -->
-    <mat-tab label="مستحقات المعلمين">
-      <div class="p-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-          <div>
-            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <mat-icon class="text-indigo-600">payments</mat-icon>
-              قائمة مستحقات المعلمين
-            </h2>
-            @if (payoutPeriodInfo()) {
-              <span class="text-xs text-slate-500 mt-1 block">
-                الفترة الحالية من: <strong class="text-indigo-600">{{ payoutPeriodInfo()?.from }}</strong> إلى: <strong class="text-indigo-600">{{ payoutPeriodInfo()?.to }}</strong> (الإجمالي: {{ payoutPeriodInfo()?.count }} معلم)
-              </span>
+    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+        <mat-icon>school</mat-icon>
+      </div>
+      <div>
+        <span class="text-[11px] text-slate-400 block font-medium">إجمالي الحصص المنفذة</span>
+        <span class="text-base sm:text-lg font-black text-slate-800">{{ totalSessions() }} حصة</span>
+      </div>
+    </div>
+
+    <div class="col-span-2 lg:col-span-1 bg-white p-4 rounded-xl border border-emerald-100 shadow-sm flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+        <mat-icon>payments</mat-icon>
+      </div>
+      <div>
+        <span class="text-[11px] text-slate-400 block font-medium">إجمالي الصافي المطلوب صرفه</span>
+        <span class="text-base sm:text-lg font-black text-emerald-600">
+          {{ totalNet() | currency:'EGP' }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- التابات -->
+  <mat-tab-group animationDuration="150ms" class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+
+    <!-- التاب الأول: كشوف الرواتب -->
+    <mat-tab label="كشوف ومستحقات الرواتب">
+      <div class="p-3 sm:p-6">
+
+        <!-- شريط الفلاتر والتوليد -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/80 mb-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-center">
+
+            <mat-form-field appearance="outline" class="w-full !text-xs" subscriptSizing="dynamic">
+              <mat-label>اختر الفترة المالية</mat-label>
+              <mat-select [value]="selectedPeriodId()" (selectionChange)="selectedPeriodId.set($event.value); loadTeacherPayouts()">
+                <mat-option value="">جميع الفترات</mat-option>
+                @for (p of payoutPeriods(); track p.id) {
+                  <mat-option [value]="p.id">
+                    {{ p.startDate | date:'shortDate' }} - {{ p.endDate | date:'shortDate' }}
+                  </mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full !text-xs" subscriptSizing="dynamic">
+              <mat-label>الحالة</mat-label>
+              <mat-select [value]="selectedStatus()" (selectionChange)="selectedStatus.set($event.value); loadTeacherPayouts()">
+                <mat-option value="">جميع الحالات</mat-option>
+                <mat-option value="Draft">مسودة (Draft)</mat-option>
+                <mat-option value="PendingReview">قيد المراجعة (PendingReview)</mat-option>
+                <mat-option value="Approved">معتمد (Approved)</mat-option>
+                <mat-option value="Rejected">مرفوض (Rejected)</mat-option>
+                <mat-option value="Paid">تم الصرف (Paid)</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="w-full !text-xs" subscriptSizing="dynamic">
+              <mat-label>المعلم</mat-label>
+              <mat-select [value]="selectedTeacherId()" (selectionChange)="selectedTeacherId.set($event.value); loadTeacherPayouts()">
+                <mat-option value="">جميع المعلمين</mat-option>
+                @for (t of teachers(); track t.id || t.teacherId) {
+                  <mat-option [value]="t.id || t.teacherId">{{ t.fullName || t.name || t.teacherName }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            <!-- زر توليد المستحقات -->
+            <button mat-flat-button
+                    class="!bg-indigo-600 hover:!bg-indigo-700 !text-white !rounded-xl !h-12 !text-xs font-bold w-full"
+                    [disabled]="!selectedPeriodId() || isLoading()"
+                    (click)="onGeneratePayouts()">
+              <mat-icon class="!text-base">auto_awesome</mat-icon>
+              توليد مستحقات الفترة
+            </button>
+          </div>
+        </div>
+
+        @if (isLoading()) {
+          <div class="flex flex-col items-center justify-center py-12">
+            <mat-spinner diameter="36"></mat-spinner>
+            <span class="text-xs text-slate-500 mt-3 font-medium">جاري تحميل البيانات...</span>
+          </div>
+        }
+
+        @if (!isLoading()) {
+          <!-- عرض الديسكتوب -->
+          <div class="hidden md:block overflow-x-auto rounded-xl border border-slate-100">
+            <table mat-table [dataSource]="payouts()" class="w-full">
+
+              <ng-container matColumnDef="teacherName">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">المعلم</th>
+                <td mat-cell *matCellDef="let element" class="py-3">
+                  <span class="font-bold text-slate-800 block">{{ element.teacherName }}</span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="phoneNumber">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">الهاتف</th>
+                <td mat-cell *matCellDef="let element" class="text-xs text-slate-500">
+                  {{ element.phoneNumber || 'غير متوفر' }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="sessionCount">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700 text-center">الحصص</th>
+                <td mat-cell *matCellDef="let element" class="text-xs text-slate-700 font-semibold text-center">
+                  {{ element.sessionCount }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="grossSalary">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">الإجمالي</th>
+                <td mat-cell *matCellDef="let element" class="font-semibold text-slate-700 text-xs">
+                  {{ (element.grossSalary || element.totalAmount || 0) | currency: (element.currency || 'EGP') }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="totalBonus">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">المكافآت</th>
+                <td mat-cell *matCellDef="let element" class="text-xs text-emerald-600 font-bold">
+                  +{{ (element.totalBonus || 0) | currency: (element.currency || 'EGP') }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="totalDeductions">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">الخصومات</th>
+                <td mat-cell *matCellDef="let element" class="text-xs text-rose-600 font-bold">
+                  -{{ ((element.totalDeductions || 0) + (element.totalPenalties || 0)) | currency: (element.currency || 'EGP') }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="netSalary">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">صافي المستحق</th>
+                <td mat-cell *matCellDef="let element" class="font-black text-emerald-600 text-sm">
+                  {{ (element.netSalary || element.finalAmount || element.grossSalary || 0) | currency: (element.currency || 'EGP') }}
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700 text-center">الحالة</th>
+                <td mat-cell *matCellDef="let element" class="text-center">
+                  <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold border" [ngClass]="getStatusBadgeClass(element.status)">
+                    {{ getStatusLabel(element.status) }}
+                  </span>
+                </td>
+              </ng-container>
+
+              <ng-container matColumnDef="actions">
+                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700 text-center">الإجراء المتاح</th>
+                <td mat-cell *matCellDef="let element" class="text-center py-2">
+                  <div class="flex items-center justify-center gap-1.5 flex-wrap">
+
+                    <!-- Draft -> Submit -->
+                    @if (element.status === 'Draft') {
+                      <button mat-flat-button class="!bg-indigo-600 !text-white !text-xs !px-2.5 !min-w-0 !rounded-lg"
+                              (click)="onExecuteAction(element, 'Submit')">
+                        إرسال للمراجعة
+                      </button>
+                    }
+
+                    <!-- PendingReview أو غير محدد -> اعتماد أو رفض -->
+                    @if (!element.status || element.status === 'PendingReview') {
+                      <button mat-flat-button class="!bg-emerald-600 hover:!bg-emerald-700 !text-white !text-xs !px-2.5 !min-w-0 !rounded-lg"
+                              (click)="onExecuteAction(element, 'Approve')">
+                        اعتماد
+                      </button>
+                      <button mat-flat-button class="!bg-rose-600 hover:!bg-rose-700 !text-white !text-xs !px-2.5 !min-w-0 !rounded-lg"
+                              (click)="onRejectAction(element)">
+                        رفض
+                      </button>
+                    }
+
+                    <!-- Approved -> Pay -->
+                    @if (element.status === 'Approved') {
+                      <button mat-flat-button class="!bg-teal-600 hover:!bg-teal-700 !text-white !text-xs !px-3 !min-w-0 !rounded-lg"
+                              (click)="onExecuteAction(element, 'Pay')">
+                        صرف الراتب
+                      </button>
+                    }
+
+                    <!-- Paid -->
+                    @if (element.status === 'Paid') {
+                      <span class="text-xs text-emerald-600 font-bold">✓ تم الصرف</span>
+                    }
+
+                    <!-- Rejected -->
+                    @if (element.status === 'Rejected') {
+                      <span class="text-xs text-rose-500 font-medium" [matTooltip]="element.reason || 'مرفوض'">مرفوض</span>
+                    }
+
+                  </div>
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+              <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-slate-50 transition"></tr>
+            </table>
+          </div>
+
+          <!-- عرض شاشات الموبايل (Responsive Cards) -->
+          <div class="block md:hidden space-y-3">
+            @for (item of payouts(); track item.id || item.teacherId) {
+              <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+
+                <div class="flex justify-between items-start pb-2 border-b border-slate-100">
+                  <div>
+                    <h3 class="font-bold text-slate-800 text-sm">{{ item.teacherName }}</h3>
+                    <span class="text-xs text-slate-400 block">{{ item.phoneNumber || 'بدون هاتف' }}</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[11px] font-bold border" [ngClass]="getStatusBadgeClass(item.status)">
+                    {{ getStatusLabel(item.status) }}
+                  </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 my-3 text-xs">
+                  <div class="bg-slate-50 p-2 rounded-lg">
+                    <span class="text-slate-400 text-[10px] block">الحصص</span>
+                    <span class="font-bold text-slate-700">{{ item.sessionCount }} حصة</span>
+                  </div>
+                  <div class="bg-slate-50 p-2 rounded-lg">
+                    <span class="text-slate-400 text-[10px] block">الإجمالي</span>
+                    <span class="font-bold text-slate-700">{{ item.grossSalary | currency:(item.currency || 'EGP') }}</span>
+                  </div>
+                  <div class="bg-emerald-50/60 p-2 rounded-lg">
+                    <span class="text-emerald-700 text-[10px] block">المكافآت</span>
+                    <span class="font-bold text-emerald-600">+{{ (item.totalBonus || 0) | currency:(item.currency || 'EGP') }}</span>
+                  </div>
+                  <div class="bg-rose-50/60 p-2 rounded-lg">
+                    <span class="text-rose-700 text-[10px] block">الخصومات</span>
+                    <span class="font-bold text-rose-600">-{{ ((item.totalDeductions || 0) + (item.totalPenalties || 0)) | currency:(item.currency || 'EGP') }}</span>
+                  </div>
+                </div>
+
+                <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg mb-3">
+                  <span class="text-xs font-bold text-slate-600">صافي المستحق:</span>
+                  <span class="text-sm font-black text-emerald-600">
+                    {{ (item.netSalary || item.finalAmount || item.grossSalary || 0) | currency:(item.currency || 'EGP') }}
+                  </span>
+                </div>
+
+                <!-- أزرار العمليات للموبايل -->
+                <div class="pt-2 border-t border-slate-100 flex gap-2">
+                  @if (item.status === 'Draft') {
+                    <button mat-flat-button class="!bg-indigo-600 !text-white !w-full !rounded-lg !text-xs !py-2"
+                            (click)="onExecuteAction(item, 'Submit')">
+                      إرسال للمراجعة
+                    </button>
+                  }
+
+                  @if (!item.status || item.status === 'PendingReview') {
+                    <button mat-flat-button class="!bg-emerald-600 !text-white flex-1 !rounded-lg !text-xs !py-2"
+                            (click)="onExecuteAction(item, 'Approve')">
+                      اعتماد
+                    </button>
+                    <button mat-flat-button class="!bg-rose-600 !text-white flex-1 !rounded-lg !text-xs !py-2"
+                            (click)="onRejectAction(item)">
+                      رفض
+                    </button>
+                  }
+
+                  @if (item.status === 'Approved') {
+                    <button mat-flat-button class="!bg-teal-600 !text-white !w-full !rounded-lg !text-xs !py-2"
+                            (click)="onExecuteAction(item, 'Pay')">
+                      صرف الراتب
+                    </button>
+                  }
+
+                  @if (item.status === 'Paid') {
+                    <div class="w-full text-center text-xs font-bold text-emerald-600 bg-emerald-50 py-1.5 rounded-lg border border-emerald-200">
+                      ✓ تم الصرف ماليًا
+                    </div>
+                  }
+
+                  @if (item.status === 'Rejected') {
+                    <div class="w-full text-center text-xs font-bold text-rose-600 bg-rose-50 py-1.5 rounded-lg border border-rose-200">
+                      مرفوض
+                    </div>
+                  }
+                </div>
+
+              </div>
             }
           </div>
-          <button mat-stroked-button (click)="loadTeacherPayouts()" class="flex items-center gap-1">
-            <mat-icon>refresh</mat-icon> تحديث
-          </button>
-        </div>
 
-        <div class="overflow-x-auto">
-          <table mat-table [dataSource]="teacherPayouts()" class="w-full">
-
-            <!-- عمود المعلم -->
-            <ng-container matColumnDef="teacherName">
-              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">المعلم</th>
-              <td mat-cell *matCellDef="let element" class="py-3">
-                <span class="font-bold text-slate-800">{{ element.teacherName }}</span>
-              </td>
-            </ng-container>
-
-            <!-- عمود الهاتف -->
-            <ng-container matColumnDef="phoneNumber">
-              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">رقم الهاتف</th>
-              <td mat-cell *matCellDef="let element" class="text-xs text-slate-600">
-                <span>{{ element.phoneNumber || 'غير متوفر' }}</span>
-              </td>
-            </ng-container>
-
-            <!-- عمود عدد الحصص -->
-            <ng-container matColumnDef="sessionCount">
-              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">عدد الحصص</th>
-              <td mat-cell *matCellDef="let element" class="text-xs text-slate-700 font-semibold">
-                {{ element.sessionCount }}
-              </td>
-            </ng-container>
-
-            <!-- عمود الراتب الإجمالي -->
-            <ng-container matColumnDef="grossSalary">
-              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">الراتب الإجمالي</th>
-              <td mat-cell *matCellDef="let element" class="font-semibold text-slate-700">
-                {{ element.grossSalary | currency: (element.currency || 'EGP') }}
-              </td>
-            </ng-container>
-
-            <!-- عمود المكافآت -->
-            <ng-container matColumnDef="totalBonus">
-              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">المكافآت</th>
-              <td mat-cell *matCellDef="let element" class="text-xs text-emerald-600 font-bold">
-                +{{ element.totalBonus | currency: (element.currency || 'EGP') }}
-              </td>
-            </ng-container>
-
-            <!-- عمود الاستقطاعات -->
-            <ng-container matColumnDef="totalDeductions">
-              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">الخصومات</th>
-              <td mat-cell *matCellDef="let element" class="text-xs text-rose-600 font-bold">
-                -{{ (element.totalDeductions + element.totalPenalties) | currency: (element.currency || 'EGP') }}
-              </td>
-            </ng-container>
-
-            <!-- عمود صافي الراتب -->
-            <ng-container matColumnDef="netSalary">
-              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">صافي المستحق</th>
-              <td mat-cell *matCellDef="let element" class="font-black text-emerald-600">
-                {{ element.netSalary | currency: (element.currency || 'EGP') }}
-              </td>
-            </ng-container>
-
-            <!-- عمود الإجراءات (قبول أو رفض) -->
-            <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700 text-center">الإجراءات</th>
-              <td mat-cell *matCellDef="let element" class="text-center">
-                <div class="flex items-center justify-center gap-2 py-2">
-                  <!-- زر الاعتماد/القبول -->
-                  <button mat-flat-button class="!bg-emerald-600 hover:!bg-emerald-700 !text-white !text-xs !min-w-0 !px-3"
-                          (click)="onApproveAction(element.teacherId)">قبول</button>
-
-                  <!-- زر الرفض (يفتح نافذة لطلب السبب) -->
-                  <button mat-flat-button class="!bg-rose-600 hover:!bg-rose-700 !text-white !text-xs !min-w-0 !px-3"
-                          (click)="onRejectAction(element.teacherId)">رفض</button>
-                </div>
-              </td>
-            </ng-container>
-
-            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-slate-50 transition"></tr>
-          </table>
-
-          @if (teacherPayouts().length === 0) {
-            <div class="text-center py-12 text-slate-400">لا توجد بيانات مسجلة في هذه الفترة حالياً</div>
+          @if (payouts().length === 0) {
+            <div class="text-center py-12 text-slate-400">لا توجد بيانات مسجلة في هذا الكشف حالياً</div>
           }
-        </div>
+        }
+
       </div>
     </mat-tab>
 
-    <!-- التاب الثاني: إنشاء فترة صرف جديدة -->
+    <!-- التاب الثاني: فترات الصرف -->
     <mat-tab label="إنشاء فترة صرف">
-      <div class="p-6 max-w-xl mx-auto">
-        <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <mat-icon class="text-indigo-600">date_range</mat-icon>
-          تحديد فترة مالية جديدة للصرف
-        </h2>
+      <div class="p-4 sm:p-8 max-w-lg mx-auto">
+        <div class="text-center mb-6">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-2">
+            <mat-icon>date_range</mat-icon>
+          </div>
+          <h2 class="text-lg font-bold text-slate-800">تحديد فترة مالية جديدة</h2>
+          <p class="text-xs text-slate-500">أنشئ فترة جديدة لتوليد مستحقات الحصص للمعلمين</p>
+        </div>
 
         <form [formGroup]="periodForm" (ngSubmit)="onCreatePeriod()" class="flex flex-col gap-4">
           <mat-form-field appearance="outline" class="w-full">
-            <mat-label>تاريخ البداية</mat-label>
+            <mat-label>تاريخ البداية (startDate)</mat-label>
             <input matInput type="date" formControlName="startDate">
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="w-full">
-            <mat-label>تاريخ النهاية</mat-label>
+            <mat-label>تاريخ النهاية (endDate)</mat-label>
             <input matInput type="date" formControlName="endDate">
           </mat-form-field>
 
-          <button mat-flat-button class="py-3 !bg-indigo-600 hover:!bg-indigo-700 text-white font-bold rounded-xl transition" [disabled]="periodForm.invalid">
+          <button mat-flat-button class="py-3.5 !bg-indigo-600 hover:!bg-indigo-700 text-white font-bold rounded-xl transition"
+                  [disabled]="periodForm.invalid || isLoading()">
             حفظ وإنشاء الفترة
           </button>
         </form>
+
+        @if (payoutPeriods().length > 0) {
+          <div class="mt-8 pt-6 border-t border-slate-100">
+            <h3 class="text-sm font-bold text-slate-700 mb-3">الفترات السابقة:</h3>
+            <div class="space-y-2">
+              @for (p of payoutPeriods(); track p.id) {
+                <div class="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
+                  <div class="text-xs text-slate-700 font-medium">
+                    {{ p.startDate | date:'shortDate' }} - {{ p.endDate | date:'shortDate' }}
+                  </div>
+                  <button mat-stroked-button class="!text-xs !min-w-0"
+                          (click)="selectedPeriodId.set(p.id); onGeneratePayouts()">
+                    <mat-icon class="!text-sm">auto_awesome</mat-icon> توليد
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        }
       </div>
     </mat-tab>
 
-    <!-- التاب الثالث: طلب تعديل مستحق -->
+    <!-- التاب الثالث: طلب تعديل مالي -->
     <mat-tab label="طلب تعديل مستحق">
-      <div class="p-6 max-w-xl mx-auto">
-        <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <mat-icon class="text-indigo-600">edit_note</mat-icon>
-          إضافة تعديل أو خصم/مكافأة لمدرس
-        </h2>
+      <div class="p-4 sm:p-8 max-w-lg mx-auto">
+        <div class="text-center mb-6">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-2">
+            <mat-icon>edit_note</mat-icon>
+          </div>
+          <h2 class="text-lg font-bold text-slate-800">إضافة تعديل أو خصم/مكافأة</h2>
+          <p class="text-xs text-slate-500">إرسال طلب مالي للتسوية على كشف مستحقات المدرس</p>
+        </div>
 
         <form [formGroup]="adjustmentForm" (ngSubmit)="onSubmitAdjustment()" class="flex flex-col gap-4">
 
           <mat-form-field appearance="outline" class="w-full">
-            <mat-label>اختر المعلم</mat-label>
+            <mat-label>اختر المعلم من الكشف</mat-label>
             <mat-select formControlName="teacherPayoutId">
-              @for (teacher of teacherPayouts(); track teacher.teacherId) {
-                <mat-option [value]="teacher.teacherId">
-                  {{ teacher.teacherName }} ({{ teacher.phoneNumber }})
+              @for (item of payouts(); track item.id || item.teacherId) {
+                <mat-option [value]="item.id || item._id || item.teacherPayoutId || item.teacherId">
+                  {{ item.teacherName }} - صافي: {{ (item.netSalary || item.grossSalary) | currency:(item.currency || 'EGP') }}
                 </mat-option>
               }
             </mat-select>
@@ -164,7 +420,10 @@
 
           <mat-form-field appearance="outline" class="w-full">
             <mat-label>نوع التعديل</mat-label>
-            <input matInput formControlName="type" placeholder="مثال: Bonus أو Deduction">
+            <mat-select formControlName="type">
+              <mat-option value="Bonus">مكافأة (Bonus)</mat-option>
+              <mat-option value="Deduction">خصم (Deduction)</mat-option>
+            </mat-select>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="w-full">
@@ -177,8 +436,9 @@
             <textarea matInput formControlName="reason" rows="3" placeholder="ذكر سبب التعديل المالي..."></textarea>
           </mat-form-field>
 
-          <button mat-flat-button class="py-3 !bg-emerald-600 hover:!bg-emerald-700 text-white font-bold rounded-xl transition" [disabled]="adjustmentForm.invalid">
-            إرسال الطلب
+          <button mat-flat-button class="py-3.5 !bg-emerald-600 hover:!bg-emerald-700 text-white font-bold rounded-xl transition"
+                  [disabled]="adjustmentForm.invalid || isLoading()">
+            إرسال طلب التعديل
           </button>
         </form>
       </div>

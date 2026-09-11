@@ -1,61 +1,119 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment.development';
+
+export type PayoutAction = 'Submit' | 'Approve' | 'Reject' | 'Pay';
+
+export interface PayoutFilter {
+  teacherId?: string;
+  periodId?: string;
+  status?: string;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class PayoutsService {
-  // قم بتغيير الـ URL الأساسي ليناسب مشروعك
+  private http = inject(HttpClient);
+  private baseUrl = `${environment.baseUrl}/api/v1/teacher-payouts`;
 
-  constructor(private http: HttpClient) {}
-
-  // دالة مساعدة لجلب التوكن وإضافته للهيدر من الـ LocalStorage
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token') || ''; // تأكد من مطابقة مفتاح التوكن لدك
+    const token = localStorage.getItem('token') || '';
     return new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     });
   }
 
-  // 1. إنشاء فترة صرف مستحقات جديدة (POST)
+  // 1. شرح دورة الرواتب والـ Actions المتاحة
+  // GET /api/v1/teacher-payouts/workflow
+  getWorkflow(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/workflow`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // 2. إنشاء فترة رواتب جديدة
+  // POST /api/v1/teacher-payouts/periods
   createPayoutPeriod(periodData: { startDate: string; endDate: string }): Observable<any> {
-    return this.http.post<any>(
-      `${environment.baseUrl}/api/v1/finance/payout-periods`,
-      periodData,
-      { headers: this.getAuthHeaders() }
-    );
+    return this.http.post<any>(`${this.baseUrl}/periods`, periodData, {
+      headers: this.getAuthHeaders()
+    });
   }
 
-  // 2. توليد مستحقات لفترة صرف معينة باستخدام الـ ID (POST)
-  generatePayoutPeriod(id: string): Observable<any> {
-    return this.http.post<any>(
-      `${environment.baseUrl}/api/v1/finance/payout-periods/${id}/generate`,
-      {}, // إذا لم يكن هناك Body يُرسل كائن فارغ
-      { headers: this.getAuthHeaders() }
-    );
+  // 3. عرض فترات الرواتب
+  // GET /api/v1/teacher-payouts/periods
+  getPayoutPeriods(): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/periods`, {
+      headers: this.getAuthHeaders()
+    });
   }
 
-  // 3. تنفيذ إجراء معين (مثل اعتماد أو إغلاق) على مستحقات الصرف (POST)
-  updatePayoutAction(id: string, action: string): Observable<any> {
+  // 4. توليد مستحقات المدرسين من الحصص لفترة معينة
+  // POST /api/v1/teacher-payouts/periods/{periodId}/generate
+  generatePeriodPayouts(periodId: string): Observable<any> {
     return this.http.post<any>(
-      `${environment.baseUrl}/api/v1/finance/payouts/${id}/${action}`,
+      `${this.baseUrl}/periods/${periodId}/generate`,
       {},
       { headers: this.getAuthHeaders() }
     );
   }
 
-  // 4. جلب قائمة مستحقات المعلمين (GET)
-  getTeacherPayouts(): Observable<any> {
+  // 5. عرض كشوف الرواتب الرسمية مع دعم الفلاتر
+  // GET /api/v1/teacher-payouts?teacherId=&periodId=&status=
+  getTeacherPayouts(filters?: PayoutFilter): Observable<any> {
+    let params = new HttpParams();
+    if (filters) {
+      if (filters.teacherId) params = params.set('teacherId', filters.teacherId);
+      if (filters.periodId) params = params.set('periodId', filters.periodId);
+      if (filters.status) params = params.set('status', filters.status);
+    }
+
+    return this.http.get<any>(this.baseUrl, {
+      headers: this.getAuthHeaders(),
+      params
+    });
+  }
+
+  // 6. جلب الملخص المالي العام لجميع المعلمين
+  // GET /api/v1/admin/teachers/financial-summary
+  getFinancialSummary(): Observable<any> {
     return this.http.get<any>(
       `${environment.baseUrl}/api/v1/admin/teachers/financial-summary`,
       { headers: this.getAuthHeaders() }
     );
   }
 
-  // 5. إنشاء طلب تعديل على مستحقات المعلم (POST)
+  // 7. عرض كشف محدد برقم الـ ID
+  // GET /api/v1/teacher-payouts/{id}
+  getTeacherPayoutById(id: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/${id}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  // 8. تغيير حالة كشف الراتب (Submit, Approve, Pay)
+  // POST /api/v1/teacher-payouts/{id}/{action}
+  executePayoutAction(id: string, action: PayoutAction, body: any = {}): Observable<any> {
+    return this.http.post<any>(
+      `${this.baseUrl}/${id}/${action}`,
+      body,
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  // 9. رفض كشف الراتب مع سبب الرفض
+  // POST /api/v1/teacher-payouts/{id}/Reject
+  rejectTeacherPayout(id: string, reason: string): Observable<any> {
+    return this.http.post<any>(
+      `${this.baseUrl}/${id}/Reject`,
+      { reason },
+      { headers: this.getAuthHeaders() }
+    );
+  }
+
+  // 10. طلبات التعديل المالي الإضافية
   createPayoutAdjustment(adjustmentData: {
     teacherPayoutId: string;
     type: string;
@@ -65,70 +123,6 @@ export class PayoutsService {
     return this.http.post<any>(
       `${environment.baseUrl}/api/v1/payout-adjustments`,
       adjustmentData,
-      { headers: this.getAuthHeaders() }
-    );
-  }
-
-  decidePayoutAdjustment(
-    id: string,
-    decisionData: { status: string; approvedAmount: number; adminResponse: string }
-  ): Observable<any> {
-    return this.http.post<any>(
-      `${environment.baseUrl}/api/v1/payout-adjustments/${id}/decision`,
-      decisionData,
-      { headers: this.getAuthHeaders() }
-    );
-  }
-
-  updateTeacherPayoutAction(id: string, action: string): Observable<any> {
-    return this.http.post<any>(
-      `${environment.baseUrl}/api/v1/teacher-payouts/${id}/${action}`,
-      {},
-      { headers: this.getAuthHeaders() }
-    );
-  }
-
-  rejectTeacherPayout(id: string, reason: string): Observable<any> {
-    return this.http.post<any>(
-      `${environment.baseUrl}/api/v1/teacher-payouts/${id}/reject`,
-      { reason: reason },
-      { headers: this.getAuthHeaders() }
-    );
-  }
-
-  // ==========================================
-  // 🚀 الـ APIs الجديدة (Payroll)
-  // ==========================================
-
-  // 1. تعديل راتب/مستحقات المعلم (PUT)
-  updateTeacherPayroll(teacherId: string, payrollData: {
-    from: string;
-    to: string;
-    sessionCount: number;
-    sessionRate: number;
-    bonus: number;
-    bonusReason: string;
-    deduction: number;
-    deductionReason: string;
-    notes: string;
-  }): Observable<any> {
-    return this.http.put<any>(
-      `${environment.baseUrl}/api/v1/payroll/teachers/${teacherId}`,
-      payrollData,
-      { headers: this.getAuthHeaders() }
-    );
-  }
-
-  // 2. اعتماد راتب/مستحقات المعلم (POST)
-  approveTeacherPayroll(teacherId: string, approvalData: {
-    from: string;
-    to: string;
-    finalAmount: number;
-    notes: string;
-  }): Observable<any> {
-    return this.http.post<any>(
-      `${environment.baseUrl}/api/v1/payroll/teachers/${teacherId}/approve`,
-      approvalData,
       { headers: this.getAuthHeaders() }
     );
   }
