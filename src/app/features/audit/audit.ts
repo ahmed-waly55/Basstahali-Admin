@@ -17,6 +17,13 @@ export interface LogItem {
   createdAt: string;
 }
 
+export interface SystemHealthState {
+  isLive: boolean;
+  message: string;
+  statusCode?: number;
+  checkedAt: Date | null;
+}
+
 @Component({
   selector: 'app-audit',
   standalone: true,
@@ -33,7 +40,15 @@ export class Audit implements OnInit {
 
   logsData = signal<LogItem[]>([]);
   isLoading = signal<boolean>(false);
-  activeTab = signal<'audit' | 'academic'>('audit');
+  activeTab = signal<'audit' | 'academic' | 'health'>('audit');
+
+  // حالة فحص الخادم (Health / Live)
+  systemHealth = signal<SystemHealthState>({
+    isLive: false,
+    message: 'جاري التحقق من الخادم...',
+    checkedAt: null
+  });
+  isHealthLoading = signal<boolean>(false);
 
   selectedLog = signal<LogItem | null>(null);
   isModalOpen = signal<boolean>(false);
@@ -54,17 +69,22 @@ export class Audit implements OnInit {
 
   ngOnInit(): void {
     this.loadLogs();
+    this.checkHealthLive();
   }
 
-  switchTab(tab: 'audit' | 'academic'): void {
+  switchTab(tab: 'audit' | 'academic' | 'health'): void {
     this.activeTab.set(tab);
-    this.loadLogs();
+    if (tab === 'health') {
+      this.checkHealthLive();
+    } else {
+      this.loadLogs();
+    }
   }
 
   loadLogs(): void {
     if (this.activeTab() === 'audit') {
       this.fetchAuditLogs();
-    } else {
+    } else if (this.activeTab() === 'academic') {
       this.fetchAcademicOperationsLogs();
     }
   }
@@ -103,7 +123,40 @@ export class Audit implements OnInit {
     });
   }
 
-  // ألوان هادئة ومتناسقة للـ Badges في الثيم الفاتح
+  /**
+   * دالة فحص الـ Endpoint health/live
+   */
+  checkHealthLive(): void {
+    this.isHealthLoading.set(true);
+    this._auditLogs.getHealthLive().subscribe({
+      next: (res: any) => {
+        let msg = 'الخادم يعمل بصحة جيدة (Live)';
+        if (typeof res === 'string') {
+          msg = res;
+        } else if (res?.status || res?.message) {
+          msg = res.status || res.message;
+        }
+
+        this.systemHealth.set({
+          isLive: true,
+          message: msg,
+          statusCode: 200,
+          checkedAt: new Date(),
+        });
+        this.isHealthLoading.set(false);
+      },
+      error: (err: any) => {
+        this.systemHealth.set({
+          isLive: false,
+          message: err.error?.message || err.statusText || 'تعذر الاتصال بالخادم (Unhealthy / Offline)',
+          statusCode: err.status || 500,
+          checkedAt: new Date(),
+        });
+        this.isHealthLoading.set(false);
+      }
+    });
+  }
+
   getActionBadgeClass(action: string): string {
     if (!action) return 'bg-gray-100 text-gray-700 border-gray-200';
 
