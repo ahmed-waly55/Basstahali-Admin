@@ -13,20 +13,23 @@ export class Auth {
   login(data: IAuth): Observable<any> {
     return this._HttpClient.post(`${environment.baseUrl}/api/v1/admin/auth/login`, data);
   }
+changePassword(data: { currentPassword: string; newPassword: string }): Observable<any> {
+  let token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
 
-  changePassword(data: { currentPassword: string; newPassword: string }): Observable<any> {
-    const token = localStorage.getItem('token') || '';
+  token = token.replace(/^Bearer\s+/i, '').trim();
 
-    const headers = new HttpHeaders({
-      'token': token
-    });
+  const headers = new HttpHeaders({
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  });
 
-    return this._HttpClient.post(
-      `${environment.baseUrl}/api/v1/admin/auth/change-password`,
-      data,
-      { headers }
-    );
-  }
+  return this._HttpClient.post(
+    `${environment.baseUrl}/api/v1/admin/auth/change-password`,
+    data,
+    { headers }
+  );
+}
+
 
   // دالة تجديد الرمز (Refresh Token)
   refreshToken(refreshToken:string): Observable<any> {

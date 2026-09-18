@@ -1,23 +1,26 @@
 import { HttpInterceptorFn } from '@angular/common/http';
-import { inject } from '@angular/core';
 import { finalize } from 'rxjs';
 import Swal from 'sweetalert2';
 
 export const authLoadingInterceptor: HttpInterceptorFn = (req, next) => {
-  // 1. جلب التوكن من الـ LocalStorage (تأكد من اسم المفتاح لديك، مثلاً 'token')
-  const token = localStorage.getItem('token');
+  // 1. استثناء مسارات معينة إذا كنت لا تريد إرسال التوكن إليها (مثل تسجيل الدخول)
+  const isAuthRequest = req.url.includes('/auth/login');
 
-  // 2. نسخ الـ Request وإضافة الهيدر إذا كان التوكن موجوداً
+  let token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
+  token = token.replace(/^Bearer\s+/i, '').trim();
+
   let clonedReq = req;
-  if (token) {
+
+  // 2. إرسال الهيدر القياسي بالصيغة الصحيحة (Authorization: Bearer TOKEN)
+  if (token && !isAuthRequest) {
     clonedReq = req.clone({
       setHeaders: {
-        'token': token // عدلها إلى 'Authorization': `Bearer ${token}` إذا كان السيرفر يطلبها هكذا
+        'Authorization': `Bearer ${token}`
       }
     });
   }
 
-  // 3. إظهار نافذة التحميل (Loading) باستخدام SweetAlert2
+  // 3. إظهار الـ Loading
   Swal.fire({
     title: 'جاري المعالجة...',
     text: 'يرجى الانتظار قليلاً',
@@ -29,10 +32,13 @@ export const authLoadingInterceptor: HttpInterceptorFn = (req, next) => {
     }
   });
 
-  // 4. تمرير الطلب وإغلاق الـ Loading فور اكتمال الطلب (سواء نجاح أو خطأ)
+  // 4. إغلاق الـ Loading بأمان دون إغلاق أي نافذة تنبيه جديدة
   return next(clonedReq).pipe(
     finalize(() => {
-      Swal.close();
+      // نتأكد فقط من إغلاق الـ Loading لو كانت نافذة الـ Loading هي المفتوحة حالياً
+      if (Swal.isVisible() && Swal.isLoading()) {
+        Swal.close();
+      }
     })
   );
 };
