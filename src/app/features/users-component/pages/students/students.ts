@@ -22,7 +22,7 @@ interface SessionsInfo {
   remainingSessions: number;
 }
 
-interface Student {
+export interface Student {
   id: string;
   fullName: string;
   phoneNumber: string;
@@ -56,11 +56,6 @@ interface Student {
   styleUrl: './students.css',
 })
 export class Students implements OnInit {
-
-  ngOnInit(): void {
-    this.getStudents();
-  }
-
   private user = inject(User);
   private router = inject(Router);
 
@@ -69,19 +64,19 @@ export class Students implements OnInit {
   searchQuery = '';
 
   selectedStudent: Student | null = null;
-
-  // الأعمدة الأساسية والمختصرة فقط
   displayedColumns: string[] = ['fullName', 'phoneNumber', 'expirationDate', 'status', 'actions'];
-
   dataSource = new MatTableDataSource<Student>([]);
+
+  ngOnInit(): void {
+    this.getStudents();
+  }
 
   getStudents() {
     this.user.getStudents().subscribe({
       next: (res) => {
-        console.log(res.data.items);
-        this.dataSource.data = res.data.items;
+        this.dataSource.data = res.data.items || [];
       },
-      error: (err) => { console.log(err); }
+      error: (err) => { console.error('خطأ في جلب الطلاب:', err); }
     });
   }
 
@@ -113,5 +108,58 @@ export class Students implements OnInit {
 
   deleteStudent(id: string) {
     this.dataSource.data = this.dataSource.data.filter(s => s.id !== id);
+  }
+
+  /**
+   * تصدير بيانات الطلاب الحالية إلى ملف Excel/CSV متوافق مع اللغة العربية
+   */
+  exportToExcel() {
+    const list = this.dataSource.filteredData.length > 0
+      ? this.dataSource.filteredData
+      : this.dataSource.data;
+
+    if (!list || list.length === 0) {
+      alert('لا توجد بيانات طلاب للتصدير.');
+      return;
+    }
+
+    const headers = [
+      'اسم الطالب',
+      'اسم المستخدم',
+      'رقم الهاتف',
+      'ولي الأمر',
+      'هاتف ولي الأمر',
+      'تاريخ الانتهاء',
+      'الحالة',
+      'إجمالي الحصص',
+      'الحصص المستهلكة',
+      'الحصص المتبقية'
+    ];
+
+    const rows = list.map(s => [
+      `"${s.fullName || ''}"`,
+      `"${s.userName || ''}"`,
+      `"${s.phoneNumber || ''}"`,
+      `"${s.parentName || ''}"`,
+      `"${s.parentPhoneNumber || ''}"`,
+      `"${s.expirationDate ? s.expirationDate.split('T')[0] : 'غير محدد'}"`,
+      `"${s.status === 'Active' ? 'نشط' : 'غير نشط'}"`,
+      s.sessions?.totalSessions ?? 0,
+      s.sessions?.usedSessions ?? 0,
+      s.sessions?.remainingSessions ?? 0
+    ]);
+
+    // إضافة علامة \uFEFF لضمان قراءة الحروف العربية بشكل صحيح داخل Excel
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `طلاب_بسطهالي_${dateStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 }
