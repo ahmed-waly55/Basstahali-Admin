@@ -1,0 +1,25 @@
+/* إتاحة التمرير اللمسي السلس في الموبايل */
+.table-container {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* تنسيق شريط التمرير الأفقي ليكون ناعماً وخفيفاً */
+.table-container::-webkit-scrollbar {
+  height: 4px;
+}
+.table-container::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+.table-container::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 9999px;
+}
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* تحسين مسافات الخلايا */
+table {
+  border-collapse: separate;
+  border-spacing: 0;
+}

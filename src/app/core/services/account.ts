@@ -73,4 +73,16 @@ export class Account {
     return this.http.get(`${environment.baseUrl}/api/v1/archived-records/teachers`, { headers: this.getAuthHeaders() });
   }
 
+  // rest password by admin
+
+
+
+//
+
+restPasswordByAdmin(userId:String, body:any):Observable<any>{
+  return this.http.post(`${environment.baseUrl}/api/v1/users/${userId}/reset-password`, body , {headers: this.getAuthHeaders()})
+}
+
+
+
 }

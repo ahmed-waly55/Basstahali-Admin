@@ -170,7 +170,7 @@ export class Teacher implements OnInit, AfterViewInit {
     });
   }
 
-  // 2. جلب المدرسين المحذوفين / المؤرشفين من الإندبوينت الخاص بالسيرفيس
+  // 2. جلب المدرسين المحذوفين / المؤرشفين
   loadArchivedTeachers(): void {
     this.isDeletedLoading = true;
     this.teacherService.getArchivedTeachers().subscribe({
@@ -188,7 +188,7 @@ export class Teacher implements OnInit, AfterViewInit {
     });
   }
 
-  // 3. فتح مودال الإضافة (Angular Material)
+  // 3. فتح مودال الإضافة
   openAddModal(): void {
     this.isEditing = false;
     this.currentTeacherId = null;
@@ -210,7 +210,7 @@ export class Teacher implements OnInit, AfterViewInit {
     });
   }
 
-  // 4. فتح مودال التعديل (Angular Material)
+  // 4. فتح مودال التعديل
   editTeacher(row: any): void {
     this.isEditing = true;
     this.currentTeacherId = row.id;
@@ -247,7 +247,7 @@ export class Teacher implements OnInit, AfterViewInit {
     });
   }
 
-  // 5. فتح مودال التفاصيل (Angular Material)
+  // 5. فتح مودال التفاصيل
   viewDetails(row: any): void {
     this.selectedTeacher = row;
     this.dialog.open(this.detailsDialogTemplate, {
@@ -257,6 +257,112 @@ export class Teacher implements OnInit, AfterViewInit {
       panelClass: 'custom-material-dialog'
     });
   }
+
+
+
+  // إعادة تعيين كلمة المرور مع دعم نسخ كلمة المرور المؤقتة
+  restPassword(teacher: any): void {
+    // نأخذ userId أولاً، وإذا لم يتواجد نأخذ id كخيار بديل
+    const userId = teacher?.userId || teacher?.applicationUserId || teacher?.id || teacher;
+    const teacherName = teacher?.fullName ? ` للمدرس (${teacher.fullName})` : '';
+
+    // للتأكد في الكونسول من الـ ID المرسل
+    console.log('Reset Password for User:', { teacher, resolvedUserId: userId });
+
+    Swal.fire({
+      title: 'إعادة تعيين كلمة المرور',
+      text: `هل أنت متأكد من رغبتك في إعادة تعيين كلمة المرور${teacherName}؟`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#0284c7',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'نعم، إعادة تعيين',
+      cancelButtonText: 'إلغاء'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // إظهار مؤشر تحميل أثناء التنفيذ
+        Swal.fire({
+          title: 'جاري إعادة التعيين...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        this.teacherService.restPasswordByAdmin(userId, {}).subscribe({
+          next: (res: any) => {
+            const data = res?.data;
+            const tempPassword = data?.temporaryPassword || '';
+            const userName = data?.userName || teacher?.userName || '';
+
+            if (tempPassword) {
+              // عرض كلمة المرور المؤقتة مع زر نسخها
+              Swal.fire({
+                icon: 'success',
+                title: 'تم إنشاء كلمة مرور مؤقتة!',
+                html: `
+                  <div class="text-right space-y-3 p-2 text-sm text-slate-700" dir="rtl">
+                    <p class="mb-2">تم إعادة تعيين كلمة المرور بنجاح، يرجى تزويد المدرس بالبيانات التالية:</p>
+                    <div class="bg-slate-100 p-3 rounded-xl border border-slate-200">
+                      <div class="mb-2">
+                        <span class="text-xs text-slate-500 font-bold block">اسم المستخدم:</span>
+                        <strong class="text-slate-800 text-sm font-mono" dir="ltr">${userName}</strong>
+                      </div>
+                      <div>
+                        <span class="text-xs text-slate-500 font-bold block">كلمة المرور المؤقتة:</span>
+                        <div class="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 mt-1">
+                          <code id="tempPassCode" class="text-indigo-600 font-bold text-base tracking-wider select-all" dir="ltr">${tempPassword}</code>
+                          <button id="copyPassBtn" type="button" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-1.5 rounded-md font-bold transition">
+                            نسخ
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `,
+                confirmButtonText: 'تم الحفظ',
+                confirmButtonColor: '#4f46e5',
+                didOpen: () => {
+                  const copyBtn = document.getElementById('copyPassBtn');
+                  if (copyBtn) {
+                    copyBtn.addEventListener('click', () => {
+                      navigator.clipboard.writeText(tempPassword).then(() => {
+                        copyBtn.innerText = 'تم النسخ ✓';
+                        copyBtn.classList.replace('text-indigo-700', 'text-emerald-700');
+                        copyBtn.classList.replace('bg-indigo-50', 'bg-emerald-50');
+                        setTimeout(() => {
+                          copyBtn.innerText = 'نسخ';
+                          copyBtn.classList.replace('text-emerald-700', 'text-indigo-700');
+                          copyBtn.classList.replace('bg-emerald-50', 'bg-indigo-50');
+                        }, 2000);
+                      });
+                    });
+                  }
+                }
+              });
+            } else {
+              Swal.fire({
+                icon: 'success',
+                title: 'تم بنجاح!',
+                text: res?.message || 'تمت إعادة تعيين كلمة المرور بنجاح',
+                timer: 2000,
+                showConfirmButton: false
+              });
+            }
+          },
+          error: (err) => {
+            Swal.fire({
+              icon: 'error',
+              title: 'خطأ',
+              text: err?.error?.message || err?.error?.errors?.[0]?.message || 'حدث خطأ أثناء إعادة تعيين كلمة المرور',
+              confirmButtonColor: '#4f46e5'
+            });
+          }
+        });
+      }
+    });
+  }
+
 
   closeModal(): void {
     if (this.dialogRef) {
@@ -398,7 +504,7 @@ export class Teacher implements OnInit, AfterViewInit {
     });
   }
 
-  // استرجاع مدرس محذوف باستخدام دالة السيرفيس المباشرة: restoreTeacher
+  // استرجاع مدرس محذوف
   restoreTeacher(id: string): void {
     Swal.fire({
       title: 'استرجاع الحساب',
