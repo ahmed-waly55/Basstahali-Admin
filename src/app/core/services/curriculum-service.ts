@@ -3,6 +3,14 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+export interface EducationStageInput {
+  nameAr: string;
+  nameEn: string;
+  code: string;
+  curriculumId: string;
+  sortOrder: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -64,6 +72,7 @@ export class CurriculumService {
     code: string;
     curriculumId: string;
     sortOrder: number;
+    educationStageId: string;
   }): Observable<any> {
     return this.http.post(`${environment.baseUrl}/api/v1/grade-levels`, data, {
       headers: this.getAuthHeaders()
@@ -77,6 +86,7 @@ export class CurriculumService {
     code: string;
     curriculumId: string;
     sortOrder: number;
+    educationStageId: string;
   }): Observable<any> {
     return this.http.put(`${environment.baseUrl}/api/v1/grade-levels/${id}`, data, {
       headers: this.getAuthHeaders()
@@ -86,6 +96,18 @@ export class CurriculumService {
   /** حذف مرحلة دراسية */
   deleteGradeLevel(id: string): Observable<any> {
     return this.http.delete(`${environment.baseUrl}/api/v1/grade-levels/${id}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  createEducationStage(data: EducationStageInput): Observable<any> {
+    return this.http.post(`${environment.baseUrl}/api/v1/education-stages`, data, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  deleteEducationStage(id: string): Observable<any> {
+    return this.http.delete(`${environment.baseUrl}/api/v1/education-stages/${encodeURIComponent(id)}`, {
       headers: this.getAuthHeaders()
     });
   }

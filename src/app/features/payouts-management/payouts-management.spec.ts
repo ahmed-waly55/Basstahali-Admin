@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { PayoutsManagement } from './payouts-management';
+import { PayoutsManagementComponent as PayoutsManagement } from './payouts-management';
 
 describe('PayoutsManagement', () => {
   let component: PayoutsManagement;

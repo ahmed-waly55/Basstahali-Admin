@@ -53,6 +53,11 @@ export class PayoutsManagementComponent implements OnInit {
   payoutPeriods = signal<any[]>([]);
   teachers = signal<any[]>([]);
   workflowInfo = signal<any>(null);
+  payoutReports = signal<any[]>([]);
+  reportsLoading = signal(false);
+  reportsError = signal('');
+  decisionPending = signal(false);
+  decisionError = signal('');
 
   // وضع العرض الحالي: 'payouts' (كشوف الرواتب التفاعلية) أو 'summary' (الملخص العام)
   viewMode = signal<'payouts' | 'summary'>('payouts');
@@ -96,6 +101,11 @@ export class PayoutsManagementComponent implements OnInit {
     type: ['', Validators.required],
     requestedAmount: [null, [Validators.required, Validators.min(1)]],
     reason: ['', Validators.required]
+  });
+
+  adjustmentDecisionForm = this.fb.nonNullable.group({
+    adjustmentId: ['', [Validators.required, Validators.pattern(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)]],
+    status: ['', Validators.required], approvedAmount: [0, [Validators.required, Validators.min(0)]], adminResponse: ['', Validators.required]
   });
 
   ngOnInit(): void {
@@ -354,6 +364,7 @@ export class PayoutsManagementComponent implements OnInit {
   }
 
   onSubmitAdjustment() {
+    if (this.isLoading()) return;
     if (this.adjustmentForm.invalid) {
       this.adjustmentForm.markAllAsTouched();
       return;
@@ -361,8 +372,11 @@ export class PayoutsManagementComponent implements OnInit {
 
     this.isLoading.set(true);
     this.payoutsService.createPayoutAdjustment(this.adjustmentForm.value).subscribe({
-      next: () => {
+      next: (res) => {
         this.isLoading.set(false);
+        if (res?.success === false) { Swal.fire('خطأ', res.message || 'تعذر إرسال طلب التعديل', 'error'); return; }
+        const id = res?.data?.id || res?.id;
+        if (id) this.adjustmentDecisionForm.patchValue({ adjustmentId: id });
         Swal.fire('نجاح', 'تم إرسال طلب التعديل بنجاح.', 'success');
         this.adjustmentForm.reset();
       },
@@ -370,6 +384,41 @@ export class PayoutsManagementComponent implements OnInit {
         this.isLoading.set(false);
         Swal.fire('خطأ', err?.error?.message || 'فشل إرسال طلب التعديل.', 'error');
       }
+    });
+  }
+
+  loadPayoutReports(): void {
+    if (this.reportsLoading()) return;
+    this.reportsLoading.set(true); this.reportsError.set('');
+    this.payoutsService.getTeacherPayoutReports().subscribe({
+      next: (res) => {
+        this.reportsLoading.set(false);
+        const data = res?.data ?? res;
+        const rows = data?.items ?? data;
+        if (res?.success === false || !Array.isArray(rows)) { this.reportsError.set(res?.message || 'تعذر قراءة تقرير المستحقات'); return; }
+        this.payoutReports.set(rows);
+      },
+      error: (err) => { this.reportsLoading.set(false); this.reportsError.set(err?.error?.message || 'تعذر تحميل تقرير المستحقات'); }
+    });
+  }
+
+  async submitAdjustmentDecision(): Promise<void> {
+    if (this.decisionPending()) return;
+    if (this.adjustmentDecisionForm.invalid) { this.adjustmentDecisionForm.markAllAsTouched(); return; }
+    const answer = await Swal.fire({ title: 'تسجيل قرار طلب التعديل؟', text: 'راجع مرجع الطلب وحالة القرار والمبلغ قبل التأكيد.', icon: 'question',
+      showCancelButton: true, confirmButtonText: 'تأكيد القرار', cancelButtonText: 'إلغاء', confirmButtonColor: '#542394' });
+    if (!answer.isConfirmed || this.decisionPending()) return;
+    const { adjustmentId, ...body } = this.adjustmentDecisionForm.getRawValue();
+    this.decisionPending.set(true); this.decisionError.set('');
+    this.payoutsService.decidePayoutAdjustment(adjustmentId, body).subscribe({
+      next: (res) => {
+        this.decisionPending.set(false);
+        if (res?.success === false) { this.decisionError.set(res.message || 'تعذر تسجيل القرار'); return; }
+        this.adjustmentDecisionForm.reset();
+        void Swal.fire('تم الحفظ', 'تم تسجيل قرار طلب التعديل', 'success');
+        this.loadData();
+      },
+      error: (err) => { this.decisionPending.set(false); this.decisionError.set(err?.error?.message || 'تعذر تسجيل القرار. يمكنك إعادة المحاولة.'); }
     });
   }
 

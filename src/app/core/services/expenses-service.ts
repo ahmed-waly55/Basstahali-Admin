@@ -3,6 +3,14 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment.development';
 
+export interface OperatingExpenseInput {
+  category: string;
+  description: string;
+  amount: number;
+  expenseDate: string;
+  reference: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -13,7 +21,7 @@ export class ExpensesService {
 
   // دالة مساعدة لجلب التوكن وإضافته للهيدر
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token') || ''; // استبدل 'token' بمفتاح التوكن لديك في LocalStorage
+    const token = (localStorage.getItem('accessToken') || localStorage.getItem('token') || '').replace(/^Bearer\s+/i, '').trim();
     return new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -21,13 +29,7 @@ export class ExpensesService {
   }
 
   // 1. إضافة مصروف تشغيلي جديد
-  createOperatingExpense(expenseData: {
-    category: string;
-    description: string;
-    amount: number;
-    expenseDate: string;
-    reference: string;
-  }): Observable<any> {
+  createOperatingExpense(expenseData: OperatingExpenseInput): Observable<any> {
     return this.http.post<any>(
       `${environment.baseUrl}/api/v1/finance/operating-expenses`,
       expenseData,
@@ -38,9 +40,27 @@ export class ExpensesService {
   // 2. جلب قائمة المصروفات التشغيلية
   getOperatingExpenses(): Observable<any> {
     return this.http.get<any>(
-      `${environment.baseUrl}/api/v1/finance/operating-expenses`,
+      `${environment.baseUrl}/api/v1/operating-expenses`,
       { headers: this.getAuthHeaders() }
     );
+  }
+
+  getOperatingExpense(id: string): Observable<any> {
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/operating-expenses/${encodeURIComponent(id)}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  updateOperatingExpense(id: string, expense: OperatingExpenseInput): Observable<any> {
+    return this.http.put<any>(`${environment.baseUrl}/api/v1/operating-expenses/${encodeURIComponent(id)}`, expense, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  deleteOperatingExpense(id: string): Observable<any> {
+    return this.http.delete<any>(`${environment.baseUrl}/api/v1/operating-expenses/${encodeURIComponent(id)}`, {
+      headers: this.getAuthHeaders()
+    });
   }
 
   // 3. اتخاذ قرار (موافقة / رفض) على مصروف معين

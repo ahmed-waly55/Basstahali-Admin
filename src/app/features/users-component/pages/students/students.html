@@ -13,7 +13,7 @@
 
       <div>
         <h1 class="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-          <span>إدارة الطلاب</span>
+          <span>{{ showArchived() ? 'أرشيف الطلاب' : 'إدارة الطلاب' }}</span>
           <span class="text-[11px] sm:text-xs px-2 py-0.5 rounded-full bg-purple-50 text-[#311060] font-bold border border-purple-200/50">
             {{ dataSource.filteredData.length }} طالب
           </span>
@@ -23,7 +23,8 @@
     </div>
 
     <!-- أزرار العمليات (متجاوبة تماماً للموبايل) -->
-    <div class="flex items-center gap-2 w-full sm:w-auto">
+    <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+      <button type="button" class="brand-button secondary" (click)="toggleArchive()" [disabled]="loading() || saving()">{{ showArchived() ? 'الطلاب الحاليون' : 'الأرشيف' }}</button>
       <button
         mat-stroked-button
         (click)="exportToExcel()"
@@ -37,7 +38,7 @@
 
       <button
         mat-flat-button
-        (click)="openModal()"
+        (click)="openModal()" [disabled]="showArchived() || saving()"
         class="flex-1 sm:flex-initial !bg-[#311060] hover:!bg-[#220a45] !text-white !rounded-xl !font-bold !text-xs !h-9 sm:!h-10 !shadow-md shadow-purple-900/15 transition-all">
         <div class="flex items-center justify-center gap-1">
           <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px]">person_add</mat-icon>
@@ -47,6 +48,10 @@
     </div>
   </header>
 
+  @if (errorMessage()) {
+    <div role="alert" class="student-alert">{{ errorMessage() }} <button type="button" (click)="getStudents()">إعادة المحاولة</button></div>
+  }
+  @if (loading()) { <p role="status" class="text-sm text-indigo-600 mb-4">جاري تحميل الطلاب...</p> }
   <!-- ================= شريط البحث السريع ================= -->
   <div class="bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200/70 shadow-xs mb-4 flex items-center gap-2">
     <div class="relative flex-1">
@@ -141,24 +146,30 @@
             <div class="flex items-center justify-center gap-1">
               <button
                 mat-icon-button
-                matTooltip="عرض التفاصيل"
+                matTooltip="عرض التفاصيل" aria-label="عرض تفاصيل الطالب"
                 (click)="openDetailsModal(student)"
                 class="!w-7 !h-7 sm:!w-8 sm:!h-8 !rounded-lg !bg-slate-50 hover:!bg-purple-50 text-slate-500 hover:text-[#311060] transition-colors flex items-center justify-center">
                 <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px]">visibility</mat-icon>
               </button>
               <button
                 mat-icon-button
-                matTooltip="تعديل"
+                matTooltip="تعديل" aria-label="تعديل الطالب" (click)="openEdit(student)" [disabled]="saving() || showArchived()"
                 class="!w-7 !h-7 sm:!w-8 sm:!h-8 !rounded-lg !bg-slate-50 hover:!bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center">
                 <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px]">edit</mat-icon>
               </button>
               <button
                 mat-icon-button
-                matTooltip="حذف"
-                (click)="deleteStudent(student.id)"
+                matTooltip="حذف" aria-label="أرشفة الطالب"
+                (click)="deleteStudent(student.id)" [disabled]="saving() || showArchived()"
                 class="!w-7 !h-7 sm:!w-8 sm:!h-8 !rounded-lg !bg-slate-50 hover:!bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors flex items-center justify-center">
                 <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px]">delete_outline</mat-icon>
               </button>
+              @if (showArchived()) {
+                <button mat-icon-button matTooltip="استعادة الطالب" aria-label="استعادة الطالب" (click)="restoreStudent(student)" [disabled]="saving()"><mat-icon>restore</mat-icon></button>
+              } @else {
+                <button mat-icon-button matTooltip="إضافة حصص تعويضية" aria-label="إضافة حصص تعويضية" (click)="openCreditModal(student)" [disabled]="saving()"><mat-icon>add_circle_outline</mat-icon></button>
+                <button mat-icon-button matTooltip="التحويل لنظام الحصص" aria-label="التحويل لنظام الحصص" (click)="setSessionMode(student)" [disabled]="saving()"><mat-icon>autorenew</mat-icon></button>
+              }
             </div>
           </td>
         </ng-container>
@@ -169,7 +180,7 @@
     </div>
 
     <!-- حالة عدم وجود بيانات -->
-    @if (dataSource.filteredData.length === 0) {
+    @if (!loading() && !errorMessage() && dataSource.filteredData.length === 0) {
       <div class="p-8 sm:p-12 text-center bg-white">
         <mat-icon class="!w-10 !h-10 sm:!w-12 sm:!h-12 !text-[40px] sm:!text-[48px] text-slate-300 mx-auto mb-2">person_search</mat-icon>
         <h3 class="text-xs sm:text-sm font-bold text-slate-700">لا يوجد طلاب مطابقون للبحث</h3>
@@ -237,15 +248,15 @@
             <div class="grid grid-cols-3 gap-2 text-center">
               <div class="bg-white p-2 rounded-xl border border-slate-200/60">
                 <span class="text-slate-400 block text-[10px] mb-0.5">الإجمالي</span>
-                <span class="font-black text-slate-900 text-sm">{{ selectedStudent.sessions.totalSessions }}</span>
+                <span class="font-black text-slate-900 text-sm">{{ selectedStudent.sessions?.totalSessions ?? 0 }}</span>
               </div>
               <div class="bg-white p-2 rounded-xl border border-slate-200/60">
                 <span class="text-slate-400 block text-[10px] mb-0.5">المستهلك</span>
-                <span class="font-black text-amber-600 text-sm">{{ selectedStudent.sessions.usedSessions }}</span>
+                <span class="font-black text-amber-600 text-sm">{{ selectedStudent.sessions?.usedSessions ?? 0 }}</span>
               </div>
               <div class="bg-white p-2 rounded-xl border border-slate-200/60">
                 <span class="text-slate-400 block text-[10px] mb-0.5">المتبقي</span>
-                <span class="font-black text-emerald-600 text-sm">{{ selectedStudent.sessions.remainingSessions }}</span>
+                <span class="font-black text-emerald-600 text-sm">{{ selectedStudent.sessions?.remainingSessions ?? 0 }}</span>
               </div>
             </div>
           </div>
@@ -286,4 +297,72 @@
     </div>
   }
 
+
+  @if (isModalOpen) {
+    <div class="student-modal-backdrop" (click)="closeModal()">
+      <section class="student-modal" role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" aria-labelledby="student-editor-title" (click)="$event.stopPropagation()" (keydown.escape)="closeModal()">
+        <header class="student-modal-header"><div><p class="brand-eyebrow">بسطهالي / الطلاب</p><h2 id="student-editor-title">{{ editingId() ? 'تعديل بيانات الطالب' : 'إضافة طالب جديد' }}</h2></div><button type="button" aria-label="إغلاق نموذج الطالب" (click)="closeModal()" [disabled]="saving()"><mat-icon>close</mat-icon></button></header>
+        <form [formGroup]="studentForm" (ngSubmit)="saveStudent()">
+          @if (editorError()) { <p role="alert" class="student-alert">{{ editorError() }}</p> }
+          <fieldset [disabled]="saving()" class="student-fields">
+            <legend>بيانات الحساب</legend>
+            <label>الاسم الكامل *<input formControlName="fullName" autocomplete="name" required /></label>
+            <label>رقم الهاتف *<input formControlName="phoneNumber" type="tel" dir="ltr" required /></label>
+            @if (!editingId()) {
+              <label>اسم المستخدم *<input formControlName="userName" autocomplete="off" required /></label>
+              <label>كلمة المرور الأولية *<input formControlName="password" type="password" autocomplete="new-password" minlength="6" required /></label>
+            }
+            <label>اسم ولي الأمر<input formControlName="parentName" /></label>
+            <label>هاتف ولي الأمر<input formControlName="parentPhoneNumber" type="tel" dir="ltr" /></label>
+          </fieldset>
+          <fieldset [disabled]="saving()" class="student-fields">
+            <legend>البيانات الدراسية</legend>
+            <label>المنهج *
+              @if (curriculums().length) { <select formControlName="curriculumId" required><option value="">اختر المنهج</option>@for (item of curriculums(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select> }
+              @else { <input formControlName="curriculumId" placeholder="معرّف المنهج UUID" dir="ltr" required /> }
+            </label>
+            <label>الصف الدراسي *
+              @if (gradeLevels().length) { <select formControlName="gradeLevelId" required><option value="">اختر الصف</option>@for (item of gradeLevels(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select> }
+              @else { <input formControlName="gradeLevelId" placeholder="معرّف الصف UUID" dir="ltr" required /> }
+            </label>
+            <label>معرّف المرحلة التعليمية *<input formControlName="educationStageId" placeholder="UUID" dir="ltr" required /><small>يمكن نسخه من بيانات المرحلة في إدارة المناهج.</small></label>
+            <label>المواد<select formControlName="subjectIds" multiple size="3">@for (item of subjects(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select><small>إسنادات المعلمين تُضاف تلقائيًا إلى المواد المختارة.</small></label>
+            @if (editingId()) {
+              <label>الحالة *<input formControlName="status" required /></label>
+              <label>تاريخ انتهاء الاشتراك *<input formControlName="expirationDate" type="datetime-local" required /></label>
+            }
+          </fieldset>
+          @if (subjectsNeedReview()) {
+            <div class="student-alert"><p>راجع المواد المسجلة للطالب قبل الحفظ. القائمة المعروضة تضم المواد المسندة إلى معلمين؛ أضف أي مواد أخرى مسجل بها.</p><label class="flex items-center gap-2 mt-2"><input type="checkbox" formControlName="subjectsReviewed" /> راجعت المواد المختارة وهي القائمة الكاملة للطالب</label></div>
+          }
+          <div class="student-assignment-heading"><h3>إسناد المعلمين</h3><button type="button" class="brand-button secondary" (click)="addAssignment()" [disabled]="saving()">إضافة إسناد</button></div>
+          <div formArrayName="teacherAssignments">
+            @for (assignment of assignments.controls; track assignment; let index = $index) {
+              <fieldset class="student-fields student-assignment" [formGroupName]="index" [disabled]="saving()">
+                <legend>الإسناد {{ index + 1 }}</legend>
+                <label>المادة *<select formControlName="subjectId" required><option value="">اختر المادة</option>@for (item of subjects(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select></label>
+                <label>المعلم *<select formControlName="teacherId" required><option value="">اختر المعلم</option>@for (item of teachers(); track item.id) { <option [value]="item.id">{{ item.fullName || item.userName || item.id }}</option> }</select></label>
+                <label>سعر الحصة *<input formControlName="sessionPrice" type="number" min="0" step="0.01" required /></label>
+                <label>العملة *<input formControlName="currency" required /></label>
+                <button type="button" class="text-rose-600 text-sm" (click)="removeAssignment(index)" [disabled]="saving()">إزالة الإسناد</button>
+              </fieldset>
+            }
+          </div>
+          <footer class="student-modal-actions"><button class="brand-button secondary" type="button" (click)="closeModal()" [disabled]="saving()">إلغاء</button><button class="brand-button" type="submit" [disabled]="saving()">{{ saving() ? 'جاري الحفظ...' : 'حفظ الطالب' }}</button></footer>
+        </form>
+      </section>
+    </div>
+  }
+  @if (creditTarget(); as student) {
+    <div class="student-modal-backdrop" (click)="closeCreditModal()">
+      <section class="student-modal student-credit-modal" role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" aria-labelledby="student-credits-title" (click)="$event.stopPropagation()" (keydown.escape)="closeCreditModal()">
+        <header class="student-modal-header"><h2 id="student-credits-title">إضافة حصص تعويضية — {{ student.fullName }}</h2><button type="button" (click)="closeCreditModal()" aria-label="إغلاق" [disabled]="saving()"><mat-icon>close</mat-icon></button></header>
+        <form [formGroup]="creditForm" (ngSubmit)="saveCredits()">
+          @if (editorError()) { <p role="alert" class="student-alert">{{ editorError() }}</p> }
+          <fieldset class="student-fields" [disabled]="saving()"><label>عدد الحصص *<input type="number" formControlName="quantity" min="1" step="1" required /></label><label>سبب الإضافة *<input formControlName="description" required /></label></fieldset>
+          <footer class="student-modal-actions"><button type="button" class="brand-button secondary" (click)="closeCreditModal()" [disabled]="saving()">إلغاء</button><button type="submit" class="brand-button" [disabled]="creditForm.invalid || saving()">{{ saving() ? 'جاري الحفظ...' : 'إضافة الحصص' }}</button></footer>
+        </form>
+      </section>
+    </div>
+  }
 </div>

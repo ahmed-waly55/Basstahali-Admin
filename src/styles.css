@@ -1,3 +1,46 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import 'tailwindcss';
+@import './assets/fonts.css';
+@import './assets/fontawesome.css';
+
+@theme {
+  --font-sans: 'Tajawal', 'Segoe UI', sans-serif;
+  --color-indigo-50: #f5f0fc;
+  --color-indigo-100: #eadef8;
+  --color-indigo-200: #d4bdf0;
+  --color-indigo-300: #b792e1;
+  --color-indigo-400: #9460cd;
+  --color-indigo-500: #763cb4;
+  --color-indigo-600: #582b91;
+  --color-indigo-700: #462079;
+  --color-indigo-800: #35185d;
+  --color-indigo-900: #271243;
+}
+
+:root {
+  --brand: #582b91;
+  --brand-deep: #32145c;
+  --brand-gold: #f5bd08;
+  --mat-sys-primary: #582b91;
+  --mat-sys-on-primary: #fff;
+  --mat-sys-primary-container: #eee5f9;
+  --mat-sys-on-primary-container: #32145c;
+  --mat-sys-body-medium-font: 'Tajawal', 'Segoe UI', sans-serif;
+}
+html, body { min-height: 100%; }
+body { margin: 0; background: #f7f6fa; color: #272235; font-family: var(--font-sans); }
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+a, button, input, select, textarea { outline-offset: 4px; }
+:focus-visible { outline: 3px solid #a47bd4; }
+::selection { background: #eadcf9; color: #32145c; }
+.mat-icon { flex-shrink: 0; }
+.mdc-button, .mat-mdc-menu-item, .mat-mdc-table, .mat-mdc-form-field { font-family: var(--font-sans); }
+.mat-mdc-header-cell { font-family: var(--font-sans); }
+.mat-mdc-row:hover { background-color: #faf7fe; }
+.brand-eyebrow { color: #785b9b; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.brand-title { color: #32145c; font-size: clamp(24px, 3vw, 34px); font-weight: 800; line-height: 1.5; }
+.brand-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border-radius: 12px; background: #582b91; color: white; font-size: 13px; font-weight: 700; text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: background .2s; }
+.brand-button:hover { background: #3e1e6b; }
+.brand-button.secondary { background: white; color: #582b91; border-color: #e4daef; }
+.brand-button.secondary:hover { background: #f5f0fc; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

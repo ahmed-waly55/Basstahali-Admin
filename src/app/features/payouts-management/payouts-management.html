@@ -411,7 +411,7 @@
             <mat-label>اختر المعلم من الكشف</mat-label>
             <mat-select formControlName="teacherPayoutId">
               @for (item of payouts(); track item.id || item.teacherId) {
-                <mat-option [value]="item.id || item._id || item.teacherPayoutId || item.teacherId">
+                <mat-option [value]="item.id || item._id || item.teacherPayoutId" [disabled]="!(item.id || item._id || item.teacherPayoutId)">
                   {{ item.teacherName }} - صافي: {{ (item.netSalary || item.grossSalary) | currency:(item.currency || 'EGP') }}
                 </mat-option>
               }
@@ -444,5 +444,30 @@
       </div>
     </mat-tab>
 
+    <mat-tab label="قرار طلب تعديل">
+      <div class="p-4 sm:p-8 max-w-2xl mx-auto">
+        <h2 class="text-lg font-bold text-purple-900 mb-2">مراجعة طلب تعديل مستحق</h2>
+        <p class="text-sm text-slate-500 mb-6">أدخل مرجع طلب التعديل المطلوب مراجعته وحالة القرار المعتمدة في نظام الأكاديمية.</p>
+        @if (decisionError()) { <p role="alert" class="p-3 mb-4 rounded-xl bg-rose-50 text-rose-800">{{ decisionError() }}</p> }
+        <form [formGroup]="adjustmentDecisionForm" (ngSubmit)="submitAdjustmentDecision()" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <mat-form-field appearance="outline" class="sm:col-span-2"><mat-label>مرجع طلب التعديل</mat-label><input matInput formControlName="adjustmentId" dir="ltr"><mat-error>أدخل معرّف الطلب الصحيح</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>حالة القرار</mat-label><input matInput formControlName="status"><mat-error>أدخل حالة القرار</mat-error></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>المبلغ المعتمد</mat-label><input matInput type="number" min="0" step="0.01" formControlName="approvedAmount"><mat-error>أدخل مبلغاً لا يقل عن صفر</mat-error></mat-form-field>
+          <mat-form-field appearance="outline" class="sm:col-span-2"><mat-label>رد الإدارة</mat-label><textarea matInput rows="3" formControlName="adminResponse"></textarea><mat-error>أدخل رد الإدارة</mat-error></mat-form-field>
+          <button mat-flat-button class="sm:col-span-2 !bg-purple-800 !text-white" [disabled]="adjustmentDecisionForm.invalid || decisionPending()">{{ decisionPending() ? 'جارٍ الحفظ…' : 'حفظ قرار التعديل' }}</button>
+        </form>
+      </div>
+    </mat-tab>
+    <mat-tab label="تقرير المستحقات">
+      <div class="p-4 sm:p-8">
+        <div class="flex justify-between items-center gap-4 mb-5"><h2 class="text-lg font-bold text-purple-900">تقرير مستحقات المعلمين</h2><button mat-stroked-button [disabled]="reportsLoading()" (click)="loadPayoutReports()"><mat-icon>refresh</mat-icon> تحميل التقرير</button></div>
+        @if (reportsError()) { <p role="alert" class="p-3 mb-4 rounded-xl bg-rose-50 text-rose-800">{{ reportsError() }}</p> }
+        @if (reportsLoading()) { <p role="status">جارٍ تحميل التقرير…</p> }
+        @else { <div class="overflow-x-auto"><table class="w-full text-right text-sm"><thead class="bg-purple-50 text-purple-900"><tr><th class="p-4">المعلم</th><th class="p-4">الفترة</th><th class="p-4">المبلغ النهائي</th><th class="p-4">الحالة</th></tr></thead><tbody>
+          @for (item of payoutReports(); track item.id || $index) { <tr class="border-b border-slate-100"><td class="p-4">{{ item.teacherName || item.fullName || '—' }}</td><td class="p-4">{{ item.periodName || item.periodId || '—' }}</td><td class="p-4">{{ (item.finalAmount ?? item.netSalary ?? item.amount ?? 0) | number:'1.2-2' }} {{ item.currency || '' }}</td><td class="p-4">{{ getStatusLabel(item.status) }}</td></tr> }
+          @empty { <tr><td colspan="4" class="p-8 text-center text-slate-500">اضغط تحميل التقرير لعرض المستحقات المسجلة.</td></tr> }
+        </tbody></table></div> }
+      </div>
+    </mat-tab>
   </mat-tab-group>
 </div>

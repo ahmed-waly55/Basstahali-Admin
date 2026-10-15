@@ -1,0 +1,159 @@
+<section class="schedules-page" dir="rtl">
+  <header class="page-heading flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <span class="eyebrow">بسطهالي أكاديمي</span>
+      <h1>جدول حصص الطلاب</h1>
+      <p>نظّم المواعيد، وحدد المعلم والمادة وتكلفة الحصة من رصيد الطالب.</p>
+    </div>
+    <button mat-flat-button type="button" class="primary-button" [disabled]="!selectedStudentId || saving() || !!deleting() || optionsLoading()" (click)="openForm()">
+      <mat-icon>add</mat-icon> إضافة موعد
+    </button>
+  </header>
+
+  @if (lookupError()) {
+    <div role="alert" class="notice error flex items-center justify-between gap-3"><span>{{ lookupError() }}</span><button mat-button type="button" (click)="loadLookups()">إعادة تحميل القوائم</button></div>
+  }
+  @if (success()) { <p role="status" class="notice success">{{ success() }}</p> }
+  @if (error()) { <p role="alert" class="notice error">{{ error() }}</p> }
+
+  <section class="panel filters flex flex-wrap items-start gap-4" aria-label="تصفية المواعيد">
+    <mat-form-field appearance="outline" class="student-filter">
+      <mat-label>الطالب</mat-label>
+      <mat-select [(ngModel)]="selectedStudentId" (selectionChange)="studentChanged()" [disabled]="saving() || !!deleting()">
+        <mat-option value="">اختر طالبًا</mat-option>
+        @for (student of students(); track student.id) { <mat-option [value]="student.id">{{ student.name }}</mat-option> }
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="outline" class="search-filter">
+      <mat-label>بحث في المواعيد المعروضة</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="اسم الطالب أو المعلم أو المادة">
+    </mat-form-field>
+    <button mat-stroked-button type="button" class="filter-button" [disabled]="loading() || saving() || !!deleting()" (click)="showAll()">عرض كل المواعيد</button>
+    <button mat-icon-button type="button" aria-label="تحديث المواعيد" matTooltip="تحديث المواعيد" [disabled]="loading() || saving() || !!deleting()" (click)="loadSchedules(!selectedStudentId)"><mat-icon>refresh</mat-icon></button>
+  </section>
+
+  @if (formOpen()) {
+    <section class="panel form-panel" aria-labelledby="schedule-form-title">
+      <div class="flex items-center justify-between gap-3">
+        <div><h2 id="schedule-form-title">{{ editing() ? 'تعديل الموعد' : 'موعد جديد' }}</h2><p class="muted">الطالب: {{ selectedOption(students(), selectedStudentId) }}</p></div>
+        <button mat-icon-button type="button" aria-label="إغلاق نموذج الموعد" [disabled]="saving()" (click)="cancelForm()"><mat-icon>close</mat-icon></button>
+      </div>
+      <p class="time-note"><mat-icon>schedule</mat-icon> الأوقات حسب المنطقة الزمنية لجهازك: <b dir="ltr">{{ timezone }}</b>. تُحفظ المواعيد بالتوقيت العالمي.</p>
+      @if (optionsNote()) { <p class="notice info">{{ optionsNote() }}</p> }
+      @if (optionsLoading()) { <p role="status" class="muted">جارٍ تحميل خيارات الطالب…</p> }
+      @if (editing(); as row) {
+        <p class="muted">نوع التكرار الحالي: {{ row.recurrenceType === 'Once' ? 'مرة واحدة' : row.recurrenceType }}. يظل إعداد التكرار الحالي محفوظًا.</p>
+      } @else { <p class="muted">كل موعد لحصة واحدة. يمكنك تجميع عدة مواعيد ثم حفظها معًا.</p> }
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <div class="form-grid">
+          <mat-form-field appearance="outline">
+            <mat-label>المعلم</mat-label>
+            <mat-select formControlName="teacherId" required>
+              @if (form.controls.teacherId.value && !hasOption(teachers(), form.controls.teacherId.value)) { <mat-option [value]="form.controls.teacherId.value">{{ editing()?.teacherName || form.controls.teacherId.value }} (الاختيار الحالي)</mat-option> }
+              @for (teacher of teachers(); track teacher.id) { <mat-option [value]="teacher.id">{{ teacher.name }}</mat-option> }
+            </mat-select>
+            <mat-error>اختر المعلم</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>المادة</mat-label>
+            <mat-select formControlName="subjectId" required>
+              @if (form.controls.subjectId.value && !hasOption(subjects(), form.controls.subjectId.value)) { <mat-option [value]="form.controls.subjectId.value">{{ editing()?.subjectName || form.controls.subjectId.value }} (الاختيار الحالي)</mat-option> }
+              @for (subject of subjects(); track subject.id) { <mat-option [value]="subject.id">{{ subject.name }}</mat-option> }
+            </mat-select>
+            <mat-error>اختر المادة</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>التاريخ والوقت</mat-label>
+            <input matInput type="datetime-local" step="1" formControlName="scheduledAt" required>
+            <mat-error>أدخل تاريخًا ووقتًا صحيحين</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>مدة الحصة بالدقائق</mat-label>
+            <input matInput type="number" min="1" step="1" formControlName="durationMinutes" required>
+            <mat-error>أدخل عددًا صحيحًا أكبر من صفر</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>تكلفة الحصة من الرصيد</mat-label>
+            <input matInput type="number" min="0" step="any" formControlName="studentCreditCost" required>
+            <mat-error>أدخل تكلفة لا تقل عن صفر</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>الدورة المرتبطة (اختياري)</mat-label>
+            <mat-select formControlName="courseId">
+              <mat-option value="">بدون دورة</mat-option>
+              @if (form.controls.courseId.value && !hasOption(courses(), form.controls.courseId.value)) { <mat-option [value]="form.controls.courseId.value">{{ editing()?.courseName || form.controls.courseId.value }} (الاختيار الحالي)</mat-option> }
+              @for (course of courses(); track course.id) { <mat-option [value]="course.id">{{ course.name }}</mat-option> }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>رابط الحصة (اختياري)</mat-label>
+            <input matInput type="url" dir="ltr" formControlName="classLink" placeholder="https://">
+            <mat-error>أدخل رابطًا يبدأ بـ https:// أو http://</mat-error>
+          </mat-form-field>
+        </div>
+        <div class="form-actions flex flex-wrap gap-3">
+          <button mat-flat-button type="submit" class="primary-button" [disabled]="saving() || optionsLoading() || queue().length > 0">{{ saving() ? 'جارٍ الحفظ…' : editing() ? 'حفظ التعديلات' : 'حفظ الموعد' }}</button>
+          @if (!editing()) { <button mat-stroked-button type="button" [disabled]="saving() || optionsLoading()" (click)="addToQueue()"><mat-icon>playlist_add</mat-icon> إضافة للمجموعة</button> }
+          <button mat-button type="button" [disabled]="saving()" (click)="cancelForm()">إلغاء</button>
+        </div>
+      </form>
+
+      @if (queue().length) {
+        <div class="batch-panel">
+          <h3>مجموعة مواعيد جاهزة للحفظ ({{ queue().length }})</h3>
+          <p class="muted">أضف الموعد المكتوب في النموذج للمجموعة قبل حفظها؛ يتم حفظ المواعيد المدرجة أدناه فقط.</p>
+          <ul class="batch-list">
+            @for (item of queue(); track $index) {
+              <li class="flex flex-wrap items-center justify-between gap-2">
+                <span>{{ item.scheduledAt | date:'dd/MM/yyyy، HH:mm' }} · {{ selectedOption(subjects(), item.subjectId) }} · {{ selectedOption(teachers(), item.teacherId) }}</span>
+                <button mat-icon-button type="button" aria-label="إزالة الموعد من المجموعة" [disabled]="saving()" (click)="removeQueued($index)"><mat-icon>close</mat-icon></button>
+              </li>
+            }
+          </ul>
+          <button mat-flat-button type="button" class="primary-button" [disabled]="saving() || optionsLoading()" (click)="save(true)">{{ saving() ? 'جارٍ الحفظ…' : 'حفظ المجموعة' }}</button>
+        </div>
+      }
+    </section>
+  }
+
+  @if (deleteCandidate(); as row) {
+    <section class="notice error delete-confirm" role="alert" aria-label="تأكيد حذف الموعد">
+      <div><strong>حذف هذا الموعد؟</strong><p>{{ row.studentName }} · {{ row.subjectName }} · {{ row.scheduledAt | date:'dd/MM/yyyy، HH:mm' }}</p></div>
+      <button mat-flat-button type="button" class="danger-button" [disabled]="!!deleting()" (click)="confirmDelete()">{{ deleting() ? 'جارٍ الحذف…' : 'تأكيد الحذف' }}</button>
+      <button mat-button type="button" [disabled]="!!deleting()" (click)="deleteCandidate.set(null)">إلغاء</button>
+    </section>
+  }
+
+  <section class="panel table-panel" [attr.aria-busy]="loading()">
+    <div class="table-heading flex items-center justify-between gap-3"><h2>المواعيد {{ selectedStudentId ? 'الخاصة بالطالب' : '' }}</h2><span class="count">{{ filteredRows().length }} موعد معروض</span></div>
+    @if (loading()) { <div role="status" class="empty-state"><mat-icon class="loading-icon">sync</mat-icon><p>جارٍ تحميل المواعيد…</p></div> }
+    @else if (filteredRows().length) {
+      <div class="table-scroll">
+        <table>
+          <caption class="sr-only">مواعيد حصص الطلاب</caption>
+          <thead><tr><th scope="col">الطالب</th><th scope="col">المادة / المعلم</th><th scope="col">الموعد</th><th scope="col">المدة</th><th scope="col">الرصيد</th><th scope="col">الإجراءات</th></tr></thead>
+          <tbody>
+            @for (row of filteredRows(); track row.id) {
+              <tr>
+                <td><strong>{{ row.studentName }}</strong></td>
+                <td><strong>{{ row.subjectName }}</strong><span class="cell-note">{{ row.teacherName }}</span></td>
+                <td><span dir="ltr">{{ row.scheduledAt | date:'dd/MM/yyyy' }}</span><span class="cell-note" dir="ltr">{{ row.scheduledAt | date:'HH:mm' }}</span></td>
+                <td>{{ row.durationMinutes || '—' }} دقيقة</td>
+                <td>{{ row.studentCreditCost >= 0 ? row.studentCreditCost : '—' }}</td>
+                <td class="row-actions">
+                  <button mat-icon-button type="button" [attr.aria-label]="'تعديل موعد ' + row.studentName" [matTooltip]="canEdit(row) ? 'تعديل الموعد' : 'استجابة الخادم لا تحتوي بيانات كافية للتعديل بأمان'" [disabled]="!canEdit(row) || saving() || !!deleting()" (click)="edit(row)"><mat-icon>edit</mat-icon></button>
+                  <button mat-icon-button type="button" class="delete-action" [attr.aria-label]="'حذف موعد ' + row.studentName" matTooltip="حذف الموعد" [disabled]="saving() || !!deleting()" (click)="deleteCandidate.set(row)"><mat-icon>delete_outline</mat-icon></button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="table-note">البحث يفلتر المواعيد المُحمّلة حاليًا. المنطقة الزمنية للعرض: <span dir="ltr">{{ timezone }}</span>.</p>
+    } @else {
+      <div class="empty-state"><mat-icon>event_note</mat-icon><h3>{{ selectedStudentId ? 'لا توجد مواعيد معروضة لهذا الطالب' : 'اختر طالبًا لعرض جدول حصصه' }}</h3><p>يمكنك إضافة موعد للطالب المحدد أو عرض كل المواعيد.</p></div>
+    }
+  </section>
+</section>

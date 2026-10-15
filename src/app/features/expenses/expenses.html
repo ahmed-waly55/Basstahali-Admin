@@ -1,140 +1,22 @@
-<div dir="rtl" class="min-h-screen bg-slate-50 p-6 font-sans">
-
-  <!-- رأس الصفحة العام -->
-  <header class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-    <div>
-      <h1 class="text-2xl font-black text-slate-800">تقارير المصروفات التشغيلية</h1>
-      <p class="text-sm text-slate-500 mt-1">لوحة التحكم المركزية للمالية ومتابعة حالة الطلبات</p>
-    </div>
-  </header>
-
-  <!-- محتوى الصفحات مقسم إلى Mat Tabs -->
-  <mat-card class="rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-    <mat-tab-group animationDuration="0ms" class="w-full">
-
-      <!-- ================= التاب الأول: جدول عرض المصروفات ================= -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="ml-2 text-indigo-600">receipt_long</mat-icon>
-          قائمة المصروفات
-        </ng-template>
-
-        <div class="p-6">
-          <div class="flex justify-between items-center mb-4">
-            <h2 class="text-lg font-bold text-slate-800">بيانات المصروفات</h2>
-            <button mat-stroked-button (click)="loadExpensesReport()" class="flex items-center gap-1">
-              <mat-icon>refresh</mat-icon> تحديث
-            </button>
-          </div>
-
-          <!-- جدول البيانات -->
-          <div class="overflow-x-auto">
-            <table mat-table [dataSource]="expenses()" class="w-full">
-
-              <!-- Category Column -->
-              <ng-container matColumnDef="category">
-                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">التصنيف</th>
-                <td mat-cell *matCellDef="let element">
-                  <mat-chip class="!bg-slate-100 !text-slate-700 text-xs">{{ element.category }}</mat-chip>
-                </td>
-              </ng-container>
-
-              <!-- Amount Column -->
-              <ng-container matColumnDef="amount">
-                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">المبلغ</th>
-                <td mat-cell *matCellDef="let element" class="font-bold text-emerald-600">{{ element.amount | currency }}</td>
-              </ng-container>
-
-              <!-- Date Column -->
-              <ng-container matColumnDef="expenseDate">
-                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">تاريخ المصروف</th>
-                <td mat-cell *matCellDef="let element" class="text-slate-500 text-xs">{{ element.expenseDate }}</td>
-              </ng-container>
-
-              <!-- Status Column -->
-              <ng-container matColumnDef="status">
-                <th mat-header-cell *matHeaderCellDef class="font-bold text-slate-700">الحالة</th>
-                <td mat-cell *matCellDef="let element">
-                  <span [ngClass]="{
-                    'bg-emerald-100 text-emerald-800': element.status === 'Approved',
-                    'bg-amber-100 text-amber-800': element.status === 'Pending',
-                    'bg-rose-100 text-rose-800': element.status === 'Rejected'
-                  }" class="px-2.5 py-1 rounded-full text-xs font-semibold">
-                    {{ element.status }}
-                  </span>
-                </td>
-              </ng-container>
-
-              <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-              <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-slate-50 transition"></tr>
-            </table>
-
-            <!-- رسالة في حال عدم وجود بيانات -->
-            @if (expenses().length === 0) {
-              <div class="text-center py-12 text-slate-400">
-                لا توجد مصروفات مسجلة حالياً
-              </div>
-            }
-          </div>
-        </div>
-      </mat-tab>
-
-      <!-- ================= التاب الثاني: إضافة مصروف جديد (بشكل شبكي - حقلين جنب بعض) ================= -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="ml-2 text-indigo-600">add_circle</mat-icon>
-          إضافة مصروف جديد
-        </ng-template>
-
-        <div class="p-6 max-w-3xl mx-auto">
-          <h2 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
-            إدخال تفاصيل المصروف التشغيلي الجديد
-          </h2>
-
-          <form [formGroup]="expenseForm" (ngSubmit)="onSubmitExpense()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            <!-- Reference -->
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>المرجع (Reference)</mat-label>
-              <input matInput formControlName="reference" placeholder="أدخل رقم المرجع">
-            </mat-form-field>
-
-            <!-- Category -->
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>التصنيف (Category)</mat-label>
-              <input matInput formControlName="category" placeholder="مثال: تشغيل، صيانة...">
-            </mat-form-field>
-
-            <!-- Amount -->
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>المبلغ</mat-label>
-              <input matInput type="number" formControlName="amount">
-            </mat-form-field>
-
-            <!-- Expense Date -->
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>تاريخ المصروف</mat-label>
-              <input matInput type="date" formControlName="expenseDate">
-            </mat-form-field>
-
-            <!-- Description (يعرض على عرض الشاشة بالكامل col-span-2) -->
-            <mat-form-field appearance="outline" class="w-full md:col-span-2">
-              <mat-label>الوصف (Description)</mat-label>
-              <textarea matInput formControlName="description" rows="3" placeholder="تفاصيل المصروف..."></textarea>
-            </mat-form-field>
-
-            <!-- زر الحفظ (يعرض على عرض الشاشة بالكامل col-span-2) -->
-            <div class="md:col-span-2">
-              <button mat-flat-button color="primary" class="w-full py-4 !bg-indigo-600 hover:!bg-indigo-700 text-white font-bold rounded-xl transition" [disabled]="expenseForm.invalid">
-                حفظ وإرسال الطلب
-              </button>
-            </div>
-
-          </form>
-        </div>
-      </mat-tab>
-
-    </mat-tab-group>
-  </mat-card>
-
-</div>
+<section dir="rtl" class="finance-page">
+  <header class="page-heading"><div><span class="eyebrow">مالية بسطهالي</span><h1>المصروفات التشغيلية</h1><p>أضف مصروفات الأكاديمية وراجع تفاصيلها وعدّلها من مكان واحد.</p></div><button mat-stroked-button (click)="loadExpensesReport()" [disabled]="loading() || pending()"><mat-icon>refresh</mat-icon> تحديث</button></header>
+  @if (error()) { <div role="alert" class="error-banner">{{ error() }}</div> }
+  <div class="panel">
+    <div class="panel-heading"><h2>سجل المصروفات</h2><span>{{ expenses().length }} مصروف</span></div>
+    @if (loading()) { <p role="status" class="empty">جارٍ تحميل المصروفات…</p> }
+    @else { <div class="table-scroll"><table><thead><tr><th>التصنيف / الوصف</th><th>المرجع</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
+      @for (item of expenses(); track item.id || $index) { <tr><td><strong>{{ item.category }}</strong><small>{{ item.description }}</small></td><td>{{ item.reference || '—' }}</td><td>{{ item.amount | number:'1.2-2' }} {{ item.currency || '' }}</td><td>{{ item.expenseDate | date:'yyyy/MM/dd' }}</td><td>{{ item.status || '—' }}</td><td class="actions"><button mat-icon-button aria-label="تعديل المصروف" [disabled]="!item.id || pending()" (click)="editExpense(item)"><mat-icon>edit</mat-icon></button><button mat-icon-button aria-label="حذف المصروف" [disabled]="!item.id || pending()" (click)="deleteExpense(item)"><mat-icon>delete_outline</mat-icon></button></td></tr> }
+      @empty { <tr><td colspan="6" class="empty">لا توجد مصروفات مسجلة حالياً.</td></tr> }
+    </tbody></table></div> }
+  </div>
+  <div class="panel" id="expense-editor"><div class="panel-heading"><h2>{{ editId() ? 'تعديل المصروف' : 'إضافة مصروف جديد' }}</h2>@if (editId()) { <button mat-button type="button" (click)="cancelEdit()" [disabled]="pending()">إلغاء التعديل</button> }</div>
+    <form [formGroup]="expenseForm" (ngSubmit)="onSubmitExpense()" class="form-grid">
+      <mat-form-field appearance="outline"><mat-label>المرجع</mat-label><input matInput formControlName="reference"><mat-error>أدخل مرجع المصروف</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>التصنيف</mat-label><input matInput formControlName="category"><mat-error>أدخل التصنيف</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>المبلغ</mat-label><input matInput type="number" min="0.01" step="0.01" formControlName="amount"><mat-error>أدخل مبلغاً أكبر من صفر</mat-error></mat-form-field>
+      <mat-form-field appearance="outline"><mat-label>تاريخ المصروف</mat-label><input matInput type="date" formControlName="expenseDate"><mat-error>اختر التاريخ</mat-error></mat-form-field>
+      <mat-form-field appearance="outline" class="full"><mat-label>الوصف</mat-label><textarea matInput rows="3" formControlName="description"></textarea><mat-error>أدخل وصف المصروف</mat-error></mat-form-field>
+      <div class="full"><button mat-flat-button class="primary-action" [disabled]="pending() || expenseForm.invalid">{{ pending() ? 'جارٍ التنفيذ…' : (editId() ? 'حفظ التعديلات' : 'إضافة المصروف') }}</button></div>
+    </form>
+  </div>
+</section>

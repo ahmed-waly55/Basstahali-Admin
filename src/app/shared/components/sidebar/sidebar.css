@@ -1,0 +1,22 @@
+:host { display: block; width: 256px; }
+.brand-sidebar { display: flex; flex-direction: column; height: 100dvh; width: 256px; background: #fff; border-left: 1px solid #ebe5f2; overflow: hidden; }
+.sidebar-brand { display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 18px 24px 20px; text-decoration: none; border-bottom: 1px solid #f0ebf5; }
+.sidebar-brand img { height: 110px; width: 110px; object-fit: contain; }
+.brand-caption { margin-top: 8px; font-size: 11px; font-weight: 700; color: #75598f; display: flex; align-items: center; gap: 12px; }
+.brand-caption span { font-size: 8px; letter-spacing: 2px; color: #a095b1; }
+.sidebar-section-label { padding: 22px 26px 10px; color: #a095b1; font-weight: 700; font-size: 10px; }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 0 14px 16px; }
+.sidebar-link { display: flex; align-items: center; gap: 12px; padding: 12px; margin: 3px 0; border-radius: 11px; color: #756b83; font-size: 12px; font-weight: 600; text-decoration: none; transition: background .2s, color .2s; border: 1px solid transparent; }
+.sidebar-link > mat-icon { font-size: 20px; width: 20px; height: 20px; }
+.sidebar-link:hover { background: #faf7fe; color: #582b91; }
+.sidebar-link.nav-active { background: #f2eafa; color: #582b91; font-weight: 800; border-color: #e8d9f7; box-shadow: inset -3px 0 #582b91; }
+.sidebar-link .nav-chevron { margin-right: auto; font-size: 16px; width: 16px; height: 16px; opacity: 0; }
+.nav-active .nav-chevron { opacity: 1; }
+.sidebar-bottom { border-top: 1px solid #f0ebf5; padding: 14px; }
+.academy-note { display: flex; gap: 10px; align-items: center; background: #fffbec; padding: 13px 10px; border-radius: 12px; margin-bottom: 12px; }
+.note-dot { width: 7px; height: 7px; background: #e6ac00; border-radius: 50%; flex-shrink: 0; }
+.academy-note strong { display: block; color: #715324; font-size: 10px; }
+.academy-note small { color: #a28b67; font-size: 9px; }
+.logout-button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 0; background: transparent; color: #a25c6b; border-radius: 10px; cursor: pointer; font-size: 12px; font-weight: 700; }
+.logout-button:hover { background: #fff1f3; color: #ba334d; }
+.logout-button mat-icon { font-size: 19px; }

@@ -16,6 +16,7 @@ export class Main implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   isSidebarOpen = false;
+  private wasDesktop: boolean | undefined;
 
   ngOnInit(): void {
     this.checkScreenSize();
@@ -50,7 +51,11 @@ export class Main implements OnInit, OnDestroy {
   private checkScreenSize(): void {
     if (typeof window !== 'undefined') {
       // شاشة أقل من 768px (موبايل) = مقفول، شاشة أكبر = مفتوح
-      this.isSidebarOpen = window.innerWidth >= 768;
+      const isDesktop = window.innerWidth >= 768;
+      if (isDesktop !== this.wasDesktop) {
+        this.isSidebarOpen = isDesktop;
+        this.wasDesktop = isDesktop;
+      }
     }
   }
 

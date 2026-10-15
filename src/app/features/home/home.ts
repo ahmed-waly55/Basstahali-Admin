@@ -6,6 +6,7 @@ import {
   ViewChild,
   ChangeDetectorRef
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -89,6 +90,7 @@ export interface ApiResponse<T> {
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     MatIconModule,
     MatButtonModule,
     BaseChartDirective
@@ -171,14 +173,14 @@ export class HomeComponent implements OnInit, OnDestroy {
       {
         data: [],
         label: 'المصروفات',
-        backgroundColor: '#fed7d7',
+        backgroundColor: '#f5bd08',
         borderRadius: 6,
         barThickness: 16
       },
       {
         data: [],
         label: 'الدخل',
-        backgroundColor: '#311060',
+        backgroundColor: '#582b91',
         borderRadius: 6,
         barThickness: 16
       }

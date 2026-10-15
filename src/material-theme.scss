@@ -10,10 +10,10 @@ html {
   @include mat.theme(
     (
       color: (
-        primary: mat.$magenta-palette,
+        primary: mat.$violet-palette,
         tertiary: mat.$violet-palette,
       ),
-      typography: Roboto,
+      typography: Tajawal,
       density: 0,
     )
   );

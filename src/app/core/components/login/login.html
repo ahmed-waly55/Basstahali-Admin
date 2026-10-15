@@ -1,15 +1,19 @@
-<div class="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-50 font-sans" dir="rtl">
+<div class="login-shell" dir="rtl">
+  <section class="login-story" aria-label="أكاديمية بسطهالي">
+    <a class="story-wordmark" href="/">بسط<span>هالي</span><small>BASSTAHALI ACADEMY</small></a>
+    <div class="story-center"><span class="story-kicker">وراء كل تجربة تعليم مميزة، إدارة مميزة</span><h2>إدارة أبسط.<br />أثر <em>أكبر.</em></h2><p>طلابك، معلموك، وكل تفاصيل أكاديميتك.<br />مساحة واحدة تجمع كل اللي تحتاجه.</p><div class="story-logo"><img src="favicon.png" alt="شعار أكاديمية بسطهالي" width="190" height="190" /></div></div>
+    <p class="story-footer">بسطهالي — معاك في كل خطوة</p>
+  </section>
+  <div class="login-form-area">
 
   <!-- بطاقة تسجيل الدخول -->
-  <div class="w-full max-w-md bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-xl shadow-slate-200/60 border border-slate-100">
+  <div class="login-card">
 
     <!-- الشعار والعنوان -->
     <div class="flex flex-col items-center text-center mb-6">
-      <div class="w-12 h-12 rounded-2xl bg-[#311060] text-white flex items-center justify-center shadow-md shadow-purple-900/20 mb-3">
-        <mat-icon class="!w-6 !h-6 !text-[24px]">school</mat-icon>
-      </div>
-      <h1 class="text-xl sm:text-2xl font-black text-slate-900">بسطهالي</h1>
-      <span class="text-xs text-slate-400 font-medium mt-0.5">لوحة تحكم الإدارة</span>
+      <img class="login-logo" src="favicon.png" alt="بسطهالي" width="90" height="90" />
+      <h1 class="text-xl sm:text-2xl font-black text-slate-900">أهلًا بيك من جديد</h1>
+      <span class="text-xs text-slate-400 font-medium mt-0.5">سجّل دخولك لمتابعة وإدارة أكاديميتك</span>
     </div>
 
     <!-- النموذج -->
@@ -49,7 +53,7 @@
           mat-icon-button
           matSuffix
           (click)="hidePassword = !hidePassword"
-          tabindex="-1"
+          [attr.aria-label]="hidePassword ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور'"
           class="text-slate-400 hover:text-slate-600">
           <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
@@ -75,7 +79,7 @@
         type="submit"
         [disabled]="loginForm.invalid"
         class="login-btn !h-12 !rounded-xl !text-white !font-bold !text-sm !transition-all mt-2 flex items-center justify-center gap-2">
-        <span>دخول</span>
+        <span>تسجيل الدخول</span>
         <mat-icon class="!w-5 !h-5 !text-[20px]">arrow_back</mat-icon>
       </button>
 
@@ -88,4 +92,5 @@
     &copy; 2026 أكاديمية بسطهالي • إدارة النظام
   </p>
 
+</div>
 </div>

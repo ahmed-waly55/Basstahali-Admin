@@ -19,7 +19,7 @@ export class PayoutsService {
   private baseUrl = `${environment.baseUrl}/api/v1/teacher-payouts`;
 
   private getAuthHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token') || '';
+    const token = (localStorage.getItem('accessToken') || localStorage.getItem('token') || '').replace(/^Bearer\s+/i, '').trim();
     return new HttpHeaders({
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -125,5 +125,15 @@ export class PayoutsService {
       adjustmentData,
       { headers: this.getAuthHeaders() }
     );
+  }
+
+  decidePayoutAdjustment(id: string, body: { status: string; approvedAmount: number; adminResponse: string }): Observable<any> {
+    return this.http.post<any>(`${environment.baseUrl}/api/v1/payout-adjustments/${encodeURIComponent(id)}/decision`, body, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  getTeacherPayoutReports(): Observable<any> {
+    return this.http.get<any>(`${environment.baseUrl}/api/v1/reports/teacher-payouts`, { headers: this.getAuthHeaders() });
   }
 }

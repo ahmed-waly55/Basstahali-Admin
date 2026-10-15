@@ -2,6 +2,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { CreateModeratorRequest, UpdateModeratorRequest } from '../models/account';
 
 @Injectable({
   providedIn: 'root',
@@ -26,8 +27,12 @@ export class Account {
   }
 
   // إضافة مشرف جديد
-  createModerator(payload: any): Observable<any> {
+  createModerator(payload: CreateModeratorRequest): Observable<any> {
     return this.http.post(`${environment.baseUrl}/api/v1/moderators`, payload, { headers: this.getAuthHeaders() });
+  }
+
+  updateModerator(id: string, payload: UpdateModeratorRequest): Observable<any> {
+    return this.http.put(`${environment.baseUrl}/api/v1/moderators/${id}`, payload, { headers: this.getAuthHeaders() });
   }
 
   // حذف مشرف

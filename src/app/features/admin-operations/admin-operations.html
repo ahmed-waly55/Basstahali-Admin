@@ -1,0 +1,81 @@
+<section class="operations" dir="rtl">
+  <header class="page-header">
+    <div><span class="eyebrow">بسطهالي أكاديمي · إدارة المنصة</span><h1>كل التفاصيل، تحت إدارتك</h1><p>تابع الحسابات والحضور والرسائل من مكان واحد.</p></div>
+    <span class="header-icon" aria-hidden="true"><mat-icon>admin_panel_settings</mat-icon></span>
+  </header>
+
+  <nav class="section-tabs" aria-label="أقسام إدارة المنصة">
+    @for (item of sections; track item.key) {
+      <button type="button" [class.selected]="section() === item.key" [attr.aria-current]="section() === item.key ? 'page' : null" [disabled]="saving()" (click)="selectSection(item.key)"><mat-icon>{{ item.icon }}</mat-icon>{{ item.title }}</button>
+    }
+  </nav>
+
+  @if (notice()) { <div class="feedback success" role="status"><mat-icon>check_circle</mat-icon>{{ notice() }}</div> }
+  @if (error()) { <div class="feedback error" role="alert"><mat-icon>error_outline</mat-icon><span>{{ error() }}</span><button mat-button type="button" [disabled]="saving() || loading()" (click)="load()">إعادة المحاولة</button></div> }
+
+  <section class="workspace" [attr.aria-busy]="loading()">
+    <div class="workspace-heading"><div><h2>{{ currentSection().title }}</h2><p>{{ currentSection().description }}</p></div><div class="toolbar-actions"><button mat-stroked-button type="button" [disabled]="loading() || saving()" (click)="load()"><mat-icon>refresh</mat-icon>تحديث</button>@if (section() === 'users') { <button mat-flat-button type="button" [disabled]="saving()" (click)="openStaff()"><mat-icon>person_add</mat-icon>إضافة عضو للفريق</button> }</div></div>
+    <div class="list-tools"><label class="search"><mat-icon aria-hidden="true">search</mat-icon><input type="search" aria-label="البحث في السجلات" placeholder="ابحث بالاسم أو البيانات…" [value]="search()" (input)="updateSearch($event)"></label><span class="result-count">{{ filteredRows().length }} سجل</span></div>
+
+    @if (loading()) {
+      <div class="empty-state" role="status"><mat-icon class="loading-icon">hourglass_top</mat-icon><h3>جاري تحميل البيانات</h3><p>لحظات ونجهز لك التفاصيل.</p></div>
+    } @else if (!error() && filteredRows().length === 0) {
+      <div class="empty-state"><mat-icon>{{ search() ? 'search_off' : currentSection().icon }}</mat-icon><h3>{{ search() ? 'لا توجد نتائج مطابقة' : 'لا توجد سجلات حاليًا' }}</h3><p>{{ search() ? 'جرّب البحث باسم أو بيانات مختلفة.' : 'ستظهر البيانات هنا بمجرد توفرها.' }}</p></div>
+    } @else if (visibleRows().length) {
+      <div class="table-wrap"><table><caption class="sr-only">{{ currentSection().title }}</caption>
+        @if (section() === 'users') {
+          <thead><tr><th scope="col">المستخدم</th><th scope="col">الدور</th><th scope="col">بيانات التواصل</th><th scope="col">الحالة</th><th scope="col">إدارة الوصول</th></tr></thead>
+          <tbody>@for (row of visibleRows(); track $index) {<tr><td><div class="identity"><span class="avatar"><mat-icon>person</mat-icon></span><div><strong>{{ field(row, 'displayName', 'fullName', 'userName') }}</strong><small dir="auto">{{ field(row, 'userName', 'id') }}</small></div></div></td><td>{{ field(row, 'role', 'roles') }}</td><td><div dir="auto">{{ field(row, 'email') }}</div><small dir="auto">{{ field(row, 'phoneNumber', 'phone') }}</small></td><td><span class="badge" [class.active]="activeState(row) === true">{{ userStatus(row) }}</span></td><td><div class="row-actions"><button mat-button type="button" [disabled]="saving() || !rowId(row) || activeState(row) === true" (click)="setUserActive(row, true)"><mat-icon>check_circle_outline</mat-icon>تفعيل</button><button mat-button class="danger-button" type="button" [disabled]="saving() || !rowId(row) || activeState(row) === false" (click)="setUserActive(row, false)"><mat-icon>block</mat-icon>إيقاف</button></div></td></tr>}</tbody>
+        } @else if (section() === 'attendance') {
+          <thead><tr><th scope="col">الطالب</th><th scope="col">الحصة / المادة</th><th scope="col">المعلم</th><th scope="col">التاريخ</th><th scope="col">الحالة</th><th scope="col">الإجراء</th></tr></thead>
+          <tbody>@for (row of visibleRows(); track $index) {<tr><td><strong>{{ field(row, 'studentName', 'studentFullName', 'student.fullName', 'student.displayName') }}</strong><small>{{ field(row, 'studentId') }}</small></td><td>{{ field(row, 'sessionTitle', 'subjectName', 'session.title', 'subject.nameAr', 'sessionId') }}</td><td>{{ field(row, 'teacherName', 'teacherFullName', 'teacher.fullName') }}</td><td dir="auto">{{ field(row, 'sessionDate', 'attendanceDate', 'date', 'createdAt') }}</td><td><span class="badge">{{ field(row, 'status', 'attendanceStatus') }}</span></td><td><button mat-stroked-button type="button" [disabled]="saving() || !rowId(row)" (click)="openAttendance(row)"><mat-icon>fact_check</mat-icon>مراجعة السجل</button></td></tr>}</tbody>
+        } @else {
+          <thead><tr><th scope="col">المرسل</th><th scope="col">عنوان الرسالة</th><th scope="col">التواصل</th><th scope="col">الحالة</th><th scope="col">الإجراء</th></tr></thead>
+          <tbody>@for (row of visibleRows(); track $index) {<tr><td><strong>{{ field(row, 'fullName', 'name', 'displayName', 'senderName') }}</strong><small dir="auto">{{ field(row, 'createdAt', 'createdDate') }}</small></td><td><strong>{{ field(row, 'subject', 'title') }}</strong><small class="message-preview">{{ field(row, 'message', 'content', 'body') }}</small></td><td><div dir="auto">{{ field(row, 'email') }}</div><small dir="auto">{{ field(row, 'phoneNumber', 'phone') }}</small></td><td><span class="badge" [class.active]="field(row, 'status') === 'New'">{{ field(row, 'status') === 'New' ? 'جديدة' : field(row, 'status') }}</span></td><td><button mat-stroked-button type="button" (click)="openContact(row)"><mat-icon>mail_outline</mat-icon>عرض الرسالة</button></td></tr>}</tbody>
+        }
+      </table></div>
+      <mat-paginator [length]="filteredRows().length" [pageSize]="pageSize()" [pageIndex]="pageIndex()" [pageSizeOptions]="[5, 10, 25]" (page)="changePage($event)" aria-label="تصفح السجلات" showFirstLastButtons></mat-paginator>
+    }
+  </section>
+</section>
+
+<ng-template #staffDialog>
+  <h2 mat-dialog-title>إضافة عضو لفريق بسطهالي</h2>
+  <form [formGroup]="staffForm" (ngSubmit)="createStaff()">
+    <mat-dialog-content>
+      <p class="dialog-intro">أدخل بيانات الحساب والدور الوظيفي لعضو الفريق.</p>
+      @if (dialogError()) { <p class="feedback error" role="alert">{{ dialogError() }}</p> }
+      <div class="form-grid">
+        <mat-form-field appearance="outline"><mat-label>الاسم المعروض</mat-label><input matInput formControlName="displayName" autocomplete="name"><mat-error>أدخل الاسم المعروض.</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>اسم المستخدم</mat-label><input matInput formControlName="userName" autocomplete="off" dir="auto"><mat-error>أدخل اسم المستخدم.</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>كلمة المرور</mat-label><input matInput formControlName="password" [type]="hidePassword() ? 'password' : 'text'" autocomplete="new-password" dir="ltr"><button mat-icon-button matSuffix type="button" [attr.aria-label]="hidePassword() ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور'" (click)="hidePassword.set(!hidePassword())"><mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon></button><mat-error>أدخل كلمة المرور.</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>الدور الوظيفي</mat-label><input matInput formControlName="role" dir="auto"><mat-hint>اسم الدور المعتمد في نظام الصلاحيات</mat-hint><mat-error>أدخل الدور الوظيفي.</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>البريد الإلكتروني</mat-label><input matInput type="email" formControlName="email" autocomplete="email" dir="ltr"><mat-error>أدخل بريدًا إلكترونيًا صحيحًا.</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>رقم الهاتف</mat-label><input matInput type="tel" formControlName="phoneNumber" autocomplete="tel" dir="ltr"></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>الراتب الشهري الثابت</mat-label><input matInput type="number" min="0" formControlName="fixedMonthlySalary"><mat-error>أدخل مبلغًا يساوي صفرًا أو أكبر.</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>معلومات التواصل الإضافية</mat-label><input matInput formControlName="contactInformation"></mat-form-field>
+      </div>
+    </mat-dialog-content>
+    <mat-dialog-actions align="end"><button mat-button type="button" [disabled]="saving()" (click)="closeDialog()">إلغاء</button><button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'جاري الحفظ…' : 'إضافة عضو الفريق' }}</button></mat-dialog-actions>
+  </form>
+</ng-template>
+
+<ng-template #attendanceDialog>
+  <h2 mat-dialog-title>مراجعة سجل الحضور</h2>
+  <mat-dialog-content>
+    <div class="review-summary"><mat-icon>fact_check</mat-icon><div><strong>{{ field(selectedRow(), 'studentName', 'studentFullName', 'student.fullName', 'studentId') }}</strong><p>{{ field(selectedRow(), 'sessionTitle', 'subjectName', 'session.title', 'sessionId') }}</p><span class="badge">{{ field(selectedRow(), 'status', 'attendanceStatus') }}</span></div></div>
+    @if (dialogError()) { <p class="feedback error" role="alert">{{ dialogError() }}</p> }
+    <mat-form-field appearance="outline" class="full-width"><mat-label>ملاحظات المراجعة</mat-label><textarea matInput [formControl]="attendanceNotes" [readonly]="saving()" rows="4" placeholder="أضف ملاحظة على قرارك"></textarea></mat-form-field>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end"><button mat-button type="button" [disabled]="saving()" (click)="closeDialog()">إلغاء</button><button mat-stroked-button type="button" class="danger-button" [disabled]="saving() || !rowId(selectedRow())" (click)="decideAttendance('reject')">رفض الحضور</button><button mat-flat-button type="button" [disabled]="saving() || !rowId(selectedRow())" (click)="decideAttendance('confirm')">{{ saving() ? 'جاري الحفظ…' : 'تأكيد الحضور' }}</button></mat-dialog-actions>
+</ng-template>
+
+<ng-template #contactDialog>
+  <h2 mat-dialog-title>{{ field(selectedRow(), 'subject', 'title') === '—' ? 'تفاصيل الرسالة' : field(selectedRow(), 'subject', 'title') }}</h2>
+  <mat-dialog-content>
+    <div class="review-summary"><mat-icon>mail_outline</mat-icon><div><strong>{{ field(selectedRow(), 'fullName', 'name', 'displayName', 'senderName') }}</strong><p dir="auto">{{ field(selectedRow(), 'email') }} · {{ field(selectedRow(), 'phoneNumber', 'phone') }}</p></div></div>
+    @if (dialogError()) { <p class="feedback error" role="alert">{{ dialogError() }}</p> }
+    <p class="message-body">{{ field(selectedRow(), 'message', 'content', 'body') }}</p>
+  </mat-dialog-content>
+  <mat-dialog-actions align="end"><button mat-button type="button" [disabled]="saving()" (click)="closeDialog()">إغلاق</button><button mat-flat-button type="button" [disabled]="saving() || !rowId(selectedRow()) || field(selectedRow(), 'status') === 'New'" (click)="markContactNew()">{{ saving() ? 'جاري الحفظ…' : field(selectedRow(), 'status') === 'New' ? 'الرسالة جديدة' : 'تمييز كرسالة جديدة' }}</button></mat-dialog-actions>
+</ng-template>

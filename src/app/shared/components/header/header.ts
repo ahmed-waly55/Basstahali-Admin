@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { RouterLink, Router } from '@angular/router';
 import { Notifications } from '../../../core/services/notifications';
 
 @Component({
@@ -12,6 +13,7 @@ import { Notifications } from '../../../core/services/notifications';
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
@@ -26,6 +28,13 @@ export class Header implements OnInit {
   @Output() toggleSidebar = new EventEmitter<void>();
 
   userName: string | null = localStorage.getItem('user');
+
+  private router = inject(Router);
+
+  logout(): void {
+    localStorage.clear();
+    this.router.navigate(['/login']);
+  }
 
   private notificationsService = inject(Notifications);
 

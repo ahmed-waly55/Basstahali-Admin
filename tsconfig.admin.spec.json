@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.spec.json",
+  "include": [
+    "src/**/*.d.ts",
+    "src/app/core/services/*.spec.ts",
+    "src/app/core/models/student-schedules.spec.ts",
+    "src/app/features/users-component/pages/students/*.spec.ts",
+    "src/app/features/users-component/pages/moderator/*.spec.ts",
+    "src/app/features/admin-operations/*.spec.ts",
+    "src/app/features/student-finance/*.spec.ts",
+    "src/app/features/courses/courses.spec.ts",
+    "src/app/features/curriculum/curriculum.spec.ts",
+    "src/app/features/expenses/expenses.spec.ts"
+  ]
+}

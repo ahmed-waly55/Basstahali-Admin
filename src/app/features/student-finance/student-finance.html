@@ -1,0 +1,169 @@
+<main class="finance-page" dir="rtl">
+  <header class="page-heading">
+    <div><span class="eyebrow">بسطهالي · الإدارة المالية</span><h1>مالية الطلاب</h1><p>تابع التحصيل، رصيد الحصص وخطط الأقساط من مكان واحد.</p></div>
+    <span class="heading-icon"><mat-icon>account_balance_wallet</mat-icon></span>
+  </header>
+
+  <section class="summary-section" aria-label="ملخص مالية الطلاب">
+    <div class="section-title"><h2>نظرة على الحسابات</h2><button mat-button (click)="refreshSummary()" [disabled]="loading()['summary']"><mat-icon>refresh</mat-icon>تحديث الملخص</button></div>
+    @if (loading()['summary']) { <p class="muted" role="status">جارٍ تحميل الملخص…</p> }
+    @if (errors()['summary']) { <p class="error" role="alert">{{ errors()['summary'] }}</p> }
+    <div class="summary-grid">
+      @for (field of summaryFields(); track $index) { <article class="metric"><span>{{ field.label }}</span><strong>{{ field.value }}</strong></article> }
+    </div>
+    @if (!loading()['summary'] && !errors()['summary'] && !summaryFields().length) { <p class="muted">لا يوجد ملخص مالي متاح حالياً.</p> }
+  </section>
+
+  <section class="finance-panel">
+    <div class="student-filter">
+      <label for="finance-student">اختيار الطالب</label>
+      <select id="finance-student" [(ngModel)]="selectedStudentId" (ngModelChange)="selectStudent()" [disabled]="saving() || loading()['students']">
+        <option value="">كل الطلاب — عرض المدفوعات</option>
+        @for (student of students(); track student.id) { <option [value]="student.id">{{ student.fullName }}</option> }
+      </select>
+      <span class="muted">اختار طالب لتسجيل دفعة، إضافة حصص أو إنشاء خطة أقساط.</span>
+      @if (errors()['students']) { <p class="error" role="alert">{{ errors()['students'] }} <button mat-button (click)="ngOnInit()">إعادة المحاولة</button></p> }
+    </div>
+
+    <nav class="finance-tabs" aria-label="أقسام مالية الطلاب">
+      <button type="button" [class.active]="tab() === 'payments'" [attr.aria-current]="tab() === 'payments' ? 'page' : null" (click)="setTab('payments')">المدفوعات</button>
+      <button type="button" [class.active]="tab() === 'credits'" [attr.aria-current]="tab() === 'credits' ? 'page' : null" (click)="setTab('credits')">رصيد الحصص</button>
+      <button type="button" [class.active]="tab() === 'plans'" [attr.aria-current]="tab() === 'plans' ? 'page' : null" (click)="setTab('plans')">خطط الأقساط</button>
+      <button type="button" [class.active]="tab() === 'provider'" [attr.aria-current]="tab() === 'provider' ? 'page' : null" (click)="setTab('provider')">بوابة الدفع</button>
+    </nav>
+
+    @if (notice()) { <p class="notice" role="status"><mat-icon>check_circle</mat-icon>{{ notice() }}</p> }
+    @if (errors()['form'] && !openForm()) { <p class="error" role="alert">{{ errors()['form'] }}</p> }
+
+    @if (tab() === 'payments') {
+      <div class="section-title"><div><h2>سجل المدفوعات</h2><p class="muted">{{ selectedStudentId ? 'مدفوعات الطالب المحدد' : 'مدفوعات جميع الطلاب' }}</p></div><div class="actions"><button mat-button (click)="refreshPayments()" [disabled]="loading()['payments']"><mat-icon>refresh</mat-icon>تحديث</button><button mat-flat-button (click)="showForm('payment')" [disabled]="!selectedStudentId"><mat-icon>add</mat-icon>تسجيل دفعة</button></div></div>
+      @if (loading()['payments']) { <p role="status" class="muted">جارٍ تحميل المدفوعات…</p> }
+      @if (errors()['payments']) { <p class="error" role="alert">{{ errors()['payments'] }}</p> }
+      <div class="table-scroll"><table><caption class="sr-only">سجل مدفوعات الطلاب</caption><thead><tr><th>الطالب</th><th>المبلغ</th><th>طريقة الدفع</th><th>التاريخ</th><th>الحصص</th><th>المرجع</th><th>الحالة</th></tr></thead><tbody>
+        @for (payment of payments(); track $index) { <tr><td>{{ studentName(payment) }}</td><td class="money">{{ text(payment, 'amount') || '—' }} <small>{{ text(payment, 'currency') }}</small></td><td>{{ text(payment, 'paymentMethod') || '—' }}</td><td>{{ date(payment, 'paidAt', 'createdAt') }}</td><td>{{ text(payment, 'purchasedCredits') || '—' }}</td><td>{{ text(payment, 'paymentReference') || '—' }}</td><td><span class="status">{{ text(payment, 'status') || '—' }}</span></td></tr> }
+      </tbody></table></div>
+      @if (!loading()['payments'] && !errors()['payments'] && !payments().length) { <div class="empty"><mat-icon>receipt_long</mat-icon><p>لا توجد مدفوعات مسجلة.</p></div> }
+    }
+
+    @if (tab() === 'credits') {
+      <div class="section-title"><div><h2>دفعات رصيد الحصص</h2><p class="muted">سجل الرصيد المضاف للطالب وفترات صلاحيته.</p></div><div class="actions"><button mat-button (click)="refreshCredits()" [disabled]="!selectedStudentId || loading()['credits']"><mat-icon>refresh</mat-icon>تحديث</button><button mat-flat-button (click)="showForm('credit')" [disabled]="!selectedStudentId"><mat-icon>add</mat-icon>إضافة رصيد</button></div></div>
+      @if (!selectedStudentId) { <div class="empty"><mat-icon>person_search</mat-icon><p>اختار طالب لعرض رصيد حصصه وإدارته.</p></div> }
+      @else {
+        @if (loading()['credits']) { <p role="status" class="muted">جارٍ تحميل رصيد الحصص…</p> }
+        @if (errors()['credits']) { <p class="error" role="alert">{{ errors()['credits'] }}</p> }
+        <div class="table-scroll"><table><caption class="sr-only">دفعات رصيد الحصص</caption><thead><tr><th>الوصف</th><th>الحصص المضافة</th><th>الحصص المتبقية</th><th>تاريخ الإضافة</th><th>انتهاء الصلاحية</th></tr></thead><tbody>
+          @for (batch of credits(); track $index) { <tr><td>{{ text(batch, 'description') || '—' }}</td><td>{{ text(batch, 'credits', 'initialCredits', 'totalCredits') || '—' }}</td><td>{{ text(batch, 'remainingCredits', 'remainingBalance') || '—' }}</td><td>{{ date(batch, 'createdAt') }}</td><td>{{ date(batch, 'expiresAt', 'expirationDate', 'expiryDate') }}</td></tr> }
+        </tbody></table></div>
+        @if (!loading()['credits'] && !errors()['credits'] && !credits().length) { <div class="empty"><p>لا توجد دفعات رصيد لهذا الطالب.</p></div> }
+      }
+    }
+
+    @if (tab() === 'plans') {
+      <div class="section-title"><div><h2>خطط الأقساط</h2><p class="muted">كل خطط الطلاب، مع تسجيل سداد كل قسط على حدة.</p></div><div class="actions"><button mat-button (click)="refreshPlans()" [disabled]="loading()['plans']"><mat-icon>refresh</mat-icon>تحديث</button><button mat-flat-button (click)="showForm('plan')" [disabled]="!selectedStudentId"><mat-icon>add</mat-icon>إنشاء خطة</button></div></div>
+      @if (loading()['plans']) { <p role="status" class="muted">جارٍ تحميل خطط الأقساط…</p> }
+      @if (errors()['plans']) { <p class="error" role="alert">{{ errors()['plans'] }}</p> }
+      <div class="plans-list">
+        @for (plan of plans(); track $index) {
+          <article class="plan-card"><div class="plan-heading"><div><h3>{{ studentName(plan) }}</h3><span class="muted">{{ text(plan, 'scope') === 'Term' ? 'الترم الدراسي' : text(plan, 'scope') }} · {{ date(plan, 'startDate', 'createdAt') }}</span></div><strong class="money">{{ text(plan, 'totalAmount') || '—' }} <small>{{ text(plan, 'currency') }}</small></strong><span class="status">{{ text(plan, 'status') || '—' }}</span></div>
+          <div class="plan-meta"><span>المقدم: {{ text(plan, 'downPaymentAmount') || '—' }}</span><span>عدد الأقساط: {{ text(plan, 'installmentCount') || installments(plan).length }}</span><span>المتبقي: {{ text(plan, 'remainingAmount', 'outstandingAmount') || '—' }}</span></div>
+          @if (installments(plan).length) {
+            <div class="table-scroll"><table><caption class="sr-only">أقساط {{ studentName(plan) }}</caption><thead><tr><th>القسط</th><th>المبلغ</th><th>المدفوع</th><th>الاستحقاق</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>
+              @for (installment of installments(plan); track $index) { <tr><td>{{ text(installment, 'installmentNumber', 'number') || $index + 1 }}</td><td>{{ text(installment, 'amount') || '—' }} {{ text(installment, 'currency') || text(plan, 'currency') }}</td><td>{{ text(installment, 'paidAmount') || '—' }}</td><td>{{ date(installment, 'dueDate') }}</td><td>{{ text(installment, 'status') || '—' }}</td><td><button mat-stroked-button (click)="payInstallment(installment, text(plan, 'currency'))" [disabled]="!text(installment, 'id', 'installmentId') || saving()">تسجيل سداد</button></td></tr> }
+            </tbody></table></div>
+          } @else { <p class="muted">لم تصل تفاصيل الأقساط ضمن هذه الخطة.</p> }
+          </article>
+        }
+      </div>
+      @if (!loading()['plans'] && !errors()['plans'] && !plans().length) { <div class="empty"><mat-icon>event_note</mat-icon><p>لا توجد خطط أقساط مسجلة.</p></div> }
+    }
+
+    @if (tab() === 'provider') {
+      <div class="section-title"><div><h2>عمليات بوابة الدفع</h2><p class="muted">متابعة عمليات فواتيرك وتفاصيل حالتها.</p></div><button mat-button (click)="refreshProvider()" [disabled]="loading()['provider']"><mat-icon>refresh</mat-icon>تحديث</button></div>
+      @if (loading()['provider']) { <p role="status" class="muted">جارٍ تحميل عمليات الدفع…</p> }
+      @if (errors()['provider']) { <p class="error" role="alert">{{ errors()['provider'] }}</p> }
+      <div class="table-scroll"><table><caption class="sr-only">عمليات بوابة فواتيرك</caption><thead><tr><th>الطالب</th><th>المبلغ</th><th>التاريخ</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>
+        @for (payment of providerPayments(); track $index) { <tr><td>{{ studentName(payment) }}</td><td class="money">{{ text(payment, 'amount') || '—' }} {{ text(payment, 'currency') }}</td><td>{{ date(payment, 'createdAt', 'paidAt') }}</td><td><span class="status">{{ text(payment, 'status') || '—' }}</span></td><td><button mat-button (click)="showProviderPayment(payment)" [disabled]="!text(payment, 'id', 'paymentIntentId') || loading()['providerDetail']">عرض التفاصيل</button></td></tr> }
+      </tbody></table></div>
+      @if (!loading()['provider'] && !errors()['provider'] && !providerPayments().length) { <div class="empty"><p>لا توجد عمليات دفع متاحة.</p></div> }
+      @if (loading()['providerDetail']) { <p role="status" class="muted">جارٍ تحميل تفاصيل العملية…</p> }
+      @if (errors()['providerDetail']) { <p class="error" role="alert">{{ errors()['providerDetail'] }}</p> }
+      @if (providerDetail()) { <section class="provider-detail"><div class="section-title"><h3>تفاصيل عملية الدفع</h3><button mat-button (click)="providerDetail.set(null)">إغلاق التفاصيل</button></div><dl class="detail-grid">@for (field of fields(providerDetail()); track $index) { <div><dt>{{ field.label }}</dt><dd>{{ field.value }}</dd></div> }</dl></section> }
+    }
+  </section>
+
+  @if (openForm(); as formName) {
+    <div class="modal-backdrop">
+      <section class="finance-dialog" role="dialog" aria-modal="true" aria-labelledby="finance-dialog-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="closeForm()">
+        <div class="dialog-heading"><div><span class="eyebrow">عملية مالية جديدة</span><h2 id="finance-dialog-title">{{ formName === 'payment' ? 'تسجيل دفعة طالب' : formName === 'credit' ? 'إضافة رصيد حصص' : formName === 'plan' ? 'إنشاء خطة أقساط' : 'تسجيل سداد قسط' }}</h2></div><button mat-icon-button aria-label="إغلاق النموذج" (click)="closeForm()" [disabled]="saving()"><mat-icon>close</mat-icon></button></div>
+        @if (errors()['form']) { <p class="error" role="alert">{{ errors()['form'] }}</p> }
+
+        @if (formName === 'payment') {
+          <form [formGroup]="paymentForm" (ngSubmit)="submitPayment()">
+            <fieldset [disabled]="saving()" class="form-grid">
+              <label>المبلغ <input type="number" min="0.01" step="0.01" formControlName="amount" required></label>
+              <label>العملة <input type="text" formControlName="currency" required></label>
+              <label>طريقة الدفع <input type="text" formControlName="paymentMethod" required></label>
+              <label>مرجع الدفع <input type="text" formControlName="paymentReference"></label>
+              <label>تاريخ ووقت الدفع <input type="datetime-local" formControlName="paidAt" required></label>
+              <label>عدد الحصص المشتراة <input type="number" min="0" step="1" formControlName="purchasedCredits" required></label>
+              <label class="wide">الغرض من الدفعة <input type="text" formControlName="purpose" required></label>
+              <label>معرّف المادة (اختياري) <input type="text" formControlName="subjectId" dir="ltr" placeholder="UUID"></label>
+              <label>معرّف الحصة (اختياري) <input type="text" formControlName="sessionId" dir="ltr" placeholder="UUID"></label>
+              <label class="wide">ملاحظات <textarea formControlName="notes" rows="3"></textarea></label>
+            </fieldset>
+            <div class="form-footer"><button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'جارٍ التسجيل…' : 'تسجيل الدفعة' }}</button><button mat-button type="button" (click)="newOperation()" [disabled]="saving()">مسح النموذج</button><button mat-button type="button" (click)="closeForm()" [disabled]="saving()">إلغاء</button></div>
+          </form>
+        }
+
+        @if (formName === 'credit') {
+          @if (creditNeedsReview()) {
+            <div class="error" role="alert"><p>تعذر تأكيد نتيجة إضافة الرصيد. قد تكون العملية اتسجلت بالفعل؛ راجع السجل قبل تكرارها لتجنب إضافة الرصيد مرتين.</p>
+              @if (loading()['credits']) { <p role="status">جارٍ تحديث سجل الرصيد…</p> }
+              @if (errors()['credits']) { <p>{{ errors()['credits'] }}</p><button mat-button (click)="refreshCredits()">تحديث السجل</button> }
+              @if (!loading()['credits'] && !errors()['credits']) {
+                @for (batch of credits(); track $index) { <p>{{ text(batch, 'description') }} · {{ text(batch, 'credits', 'initialCredits', 'totalCredits') }} حصص · {{ date(batch, 'createdAt') }}</p> }
+                @if (!credits().length) { <p>لا توجد دفعات رصيد في السجل الحالي.</p> }
+                <button mat-stroked-button (click)="creditNeedsReview.set(false)">راجعت السجل — إتاحة إعادة المحاولة</button>
+              }
+            </div>
+          }
+          <form [formGroup]="creditForm" (ngSubmit)="submitCredit()">
+            <fieldset [disabled]="saving()" class="form-grid"><label>عدد الحصص <input type="number" min="1" step="1" formControlName="credits" required></label><label>الصلاحية بالأيام <input type="number" min="1" step="1" formControlName="validityDays" required></label><label class="wide">وصف إضافة الرصيد <textarea formControlName="description" rows="3" required></textarea></label></fieldset>
+            <div class="form-footer"><button mat-flat-button type="submit" [disabled]="saving() || creditNeedsReview()">{{ saving() ? 'جارٍ الإضافة…' : 'إضافة الرصيد' }}</button><button mat-button type="button" (click)="newOperation()" [disabled]="saving()">مسح النموذج</button><button mat-button type="button" (click)="closeForm()" [disabled]="saving()">إلغاء</button></div>
+          </form>
+        }
+
+        @if (formName === 'plan') {
+          <form [formGroup]="planForm" (ngSubmit)="submitPlan()">
+            <fieldset [disabled]="saving()" class="form-grid">
+              <label>نطاق الخطة <select formControlName="scope"><option value="Term">الترم الدراسي</option></select></label>
+              <label>العملة <input type="text" formControlName="currency" required></label>
+              <label>إجمالي المبلغ <input type="number" min="0.01" step="0.01" formControlName="totalAmount" required></label>
+              <label>المقدم <input type="number" min="0" [max]="planForm.controls.totalAmount.value" step="0.01" formControlName="downPaymentAmount" required></label>
+              <label>عدد الأقساط <input type="number" min="1" step="1" formControlName="installmentCount" required></label>
+              <label>تاريخ بداية الخطة <input type="date" formControlName="startDate" required></label>
+              <label>تاريخ أول استحقاق <input type="date" [min]="planForm.controls.startDate.value" formControlName="firstDueDate" required></label>
+              <label>طريقة الدفع <input type="text" formControlName="paymentMethod" required></label>
+              <label class="wide">مرجع الدفع <input type="text" formControlName="paymentReference"></label>
+            </fieldset>
+            <div class="form-footer"><button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'جارٍ الإنشاء…' : 'إنشاء الخطة' }}</button><button mat-button type="button" (click)="newOperation()" [disabled]="saving()">مسح النموذج</button><button mat-button type="button" (click)="closeForm()" [disabled]="saving()">إلغاء</button></div>
+          </form>
+        }
+
+        @if (formName === 'installment') {
+          <form [formGroup]="installmentForm" (ngSubmit)="submitInstallment()">
+            <fieldset [disabled]="saving()" class="form-grid">
+              <label>المبلغ المسدد <input type="number" min="0.01" step="0.01" formControlName="amount" required></label>
+              <label>العملة <input type="text" formControlName="currency" required></label>
+              <label>طريقة الدفع <input type="text" formControlName="paymentMethod" required></label>
+              <label>مرجع الدفع <input type="text" formControlName="paymentReference"></label>
+              <label class="wide">تاريخ ووقت الدفع <input type="datetime-local" formControlName="paidAt" required></label>
+              <label class="wide">ملاحظات <textarea formControlName="notes" rows="3"></textarea></label>
+            </fieldset>
+            <div class="form-footer"><button mat-flat-button type="submit" [disabled]="saving()">{{ saving() ? 'جارٍ التسجيل…' : 'تسجيل السداد' }}</button><button mat-button type="button" (click)="newOperation()" [disabled]="saving()">مسح النموذج</button><button mat-button type="button" (click)="closeForm()" [disabled]="saving()">إلغاء</button></div>
+          </form>
+        }
+      </section>
+    </div>
+  }
+</main>

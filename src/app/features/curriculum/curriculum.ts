@@ -13,9 +13,11 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { Subject, takeUntil } from 'rxjs';
+import { Subject, finalize, takeUntil } from 'rxjs';
 import Swal from 'sweetalert2';
 import { CurriculumService } from '../../core/services/curriculum-service';
+
+const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 @Component({
   selector: 'app-curriculum',
@@ -87,8 +89,25 @@ export class Curriculum implements OnInit, OnDestroy {
 
   // أعمدة الجداول
   curriculumColumns = ['nameAr', 'nameEn', 'code', 'actions'];
-  gradeLevelColumns = ['nameAr', 'nameEn', 'code', 'curriculum', 'sortOrder', 'actions'];
+  gradeLevelColumns = ['nameAr', 'nameEn', 'code', 'curriculum', 'educationStage', 'sortOrder', 'actions'];
   subjectColumns = ['nameAr', 'nameEn', 'code', 'isShared', 'actions'];
+
+  stageBusy = signal(false);
+  stageError = signal('');
+  stageMessage = signal('');
+  createdEducationStageId = signal('');
+
+  educationStageForm = this.fb.nonNullable.group({
+    nameAr: ['', Validators.required],
+    nameEn: ['', Validators.required],
+    code: ['', Validators.required],
+    curriculumId: ['', [Validators.required, Validators.pattern(uuid)]],
+    sortOrder: [0, [Validators.required, Validators.min(0), Validators.pattern(/^\d+$/)]]
+  });
+
+  deleteEducationStageForm = this.fb.nonNullable.group({
+    id: ['', [Validators.required, Validators.pattern(uuid)]]
+  });
 
   // النماذج
   curriculumForm: FormGroup = this.fb.group({
@@ -102,6 +121,7 @@ export class Curriculum implements OnInit, OnDestroy {
     nameEn: ['', Validators.required],
     code: ['', Validators.required],
     curriculumId: ['', Validators.required],
+    educationStageId: ['', [Validators.required, Validators.pattern(uuid)]],
     sortOrder: [0, [Validators.required, Validators.min(0)]]
   });
 
@@ -137,13 +157,89 @@ export class Curriculum implements OnInit, OnDestroy {
   }
 
   private showError(title: string, err: any, fallbackMessage: string) {
-    const errorMsg = err?.error?.message || err?.error?.title || err?.message || fallbackMessage;
+    const errorMsg = this.errorText(err, fallbackMessage);
     Swal.fire({
       icon: 'error',
       title: title,
       text: errorMsg,
       confirmButtonText: 'حسناً',
       confirmButtonColor: '#4f46e5'
+    });
+  }
+
+  private errorText(err: any, fallback: string): string {
+    const body = err?.error ?? err;
+    const details = body?.errors && typeof body.errors === 'object'
+      ? Object.values(body.errors).flat().filter(item => typeof item === 'string').join('، ') : '';
+    return details || body?.message || body?.title || fallback;
+  }
+
+  private accepted(response: any): boolean {
+    if (response?.success === false || response?.isSuccess === false || response?.succeeded === false) {
+      this.showError('تعذر إتمام العملية', response, 'راجع البيانات وحاول مرة أخرى.');
+      return false;
+    }
+    return true;
+  }
+
+  private readList(response: any): any[] {
+    const list = response?.data?.items ?? response?.data ?? response?.items ?? response;
+    return Array.isArray(list) ? list : [];
+  }
+
+  createEducationStage(): void {
+    this.educationStageForm.markAllAsTouched();
+    if (this.educationStageForm.invalid || this.stageBusy()) return;
+    this.stageBusy.set(true);
+    this.stageError.set('');
+    this.stageMessage.set('');
+    this.curriculumService.createEducationStage(this.educationStageForm.getRawValue())
+      .pipe(takeUntil(this.destroy$), finalize(() => this.stageBusy.set(false)))
+      .subscribe({
+        next: response => {
+          if (!this.accepted(response)) return;
+          const id = typeof response?.data === 'string' ? response.data : response?.data?.id ?? response?.id;
+          this.createdEducationStageId.set(typeof id === 'string' && uuid.test(id) ? id : '');
+          this.stageMessage.set('تمت إضافة المرحلة التعليمية بنجاح.');
+          if (this.createdEducationStageId()) {
+            this.gradeLevelForm.patchValue({ educationStageId: this.createdEducationStageId() });
+          }
+          this.educationStageForm.reset({ sortOrder: 0 });
+        },
+        error: error => this.stageError.set(this.errorText(error, 'تعذر إضافة المرحلة التعليمية.'))
+      });
+  }
+
+  deleteEducationStage(): void {
+    this.deleteEducationStageForm.markAllAsTouched();
+    if (this.deleteEducationStageForm.invalid || this.stageBusy()) return;
+    const id = this.deleteEducationStageForm.controls.id.value.trim();
+    Swal.fire({
+      title: 'حذف المرحلة التعليمية؟',
+      text: `سيتم حذف المرحلة ذات المعرّف ${id}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'نعم، احذف',
+      cancelButtonText: 'إلغاء',
+      confirmButtonColor: '#e11d48'
+    }).then(result => {
+      if (!result.isConfirmed || this.stageBusy()) return;
+      this.stageBusy.set(true);
+      this.stageError.set('');
+      this.stageMessage.set('');
+      this.curriculumService.deleteEducationStage(id)
+        .pipe(takeUntil(this.destroy$), finalize(() => this.stageBusy.set(false)))
+        .subscribe({
+          next: response => {
+            if (!this.accepted(response)) return;
+            this.stageMessage.set('تم حذف المرحلة التعليمية بنجاح.');
+            this.deleteEducationStageForm.reset();
+            if (this.createdEducationStageId() === id) this.createdEducationStageId.set('');
+            if (this.gradeLevelForm.get('educationStageId')?.value === id) this.gradeLevelForm.patchValue({ educationStageId: '' });
+            this.loadGradeLevels();
+          },
+          error: error => this.stageError.set(this.errorText(error, 'تعذر حذف المرحلة التعليمية.'))
+        });
     });
   }
 
@@ -208,7 +304,8 @@ export class Curriculum implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
-          const list = Array.isArray(res) ? res : (res.data?.items || res.data || res.items || []);
+          if (!this.accepted(res)) return;
+          const list = this.readList(res);
           this.curriculums.set(list);
           this.curriculumsDataSource.data = list;
           this.cdr.detectChanges();
@@ -230,7 +327,8 @@ export class Curriculum implements OnInit, OnDestroy {
       this.curriculumService.updateCurriculum(editId, val)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
+          next: (res) => {
+            if (!this.accepted(res)) return;
             this.showSuccess('تم التعديل!', 'تم تحديث بيانات المنهج بنجاح');
             this.cancelEditCurriculum();
             this.loadCurriculums();
@@ -241,7 +339,8 @@ export class Curriculum implements OnInit, OnDestroy {
       this.curriculumService.createCurriculum(val)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
+          next: (res) => {
+            if (!this.accepted(res)) return;
             this.showSuccess('تمت الإضافة!', 'تم إضافة المنهج الدراسي بنجاح');
             this.curriculumForm.reset();
             this.loadCurriculums();
@@ -280,7 +379,8 @@ export class Curriculum implements OnInit, OnDestroy {
         this.curriculumService.deleteCurriculum(id)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
-            next: () => {
+            next: (res) => {
+            if (!this.accepted(res)) return;
               this.showSuccess('تم الحذف!', 'تم حذف المنهج بنجاح');
               this.loadCurriculums();
             },
@@ -297,7 +397,8 @@ export class Curriculum implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
-          const list = Array.isArray(res) ? res : (res.data?.items || res.data || res.items || []);
+          if (!this.accepted(res)) return;
+          const list = this.readList(res);
           this.gradeLevels.set(list);
           this.gradeLevelsDataSource.data = list;
           this.cdr.detectChanges();
@@ -319,7 +420,8 @@ export class Curriculum implements OnInit, OnDestroy {
       this.curriculumService.updateGradeLevel(editId, val)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
+          next: (res) => {
+            if (!this.accepted(res)) return;
             this.showSuccess('تم التعديل!', 'تم تحديث بيانات المرحلة بنجاح');
             this.cancelEditGradeLevel();
             this.loadGradeLevels();
@@ -330,7 +432,8 @@ export class Curriculum implements OnInit, OnDestroy {
       this.curriculumService.createGradeLevel(val)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
+          next: (res) => {
+            if (!this.accepted(res)) return;
             this.showSuccess('تمت الإضافة!', 'تم إضافة المرحلة الدراسية بنجاح');
             this.gradeLevelForm.reset({ sortOrder: 0 });
             this.loadGradeLevels();
@@ -347,7 +450,8 @@ export class Curriculum implements OnInit, OnDestroy {
       nameEn: item.nameEn,
       code: item.code,
       curriculumId: item.curriculumId || item.curriculum?.id || '',
-      sortOrder: item.sortOrder ?? 0
+      sortOrder: item.sortOrder ?? 0,
+      educationStageId: item.educationStageId || item.educationStage?.id || ''
     });
   }
 
@@ -371,7 +475,8 @@ export class Curriculum implements OnInit, OnDestroy {
         this.curriculumService.deleteGradeLevel(id)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
-            next: () => {
+            next: (res) => {
+            if (!this.accepted(res)) return;
               this.showSuccess('تم الحذف!', 'تم حذف المرحلة بنجاح');
               this.loadGradeLevels();
             },
@@ -388,7 +493,8 @@ export class Curriculum implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (res) => {
-          const list = Array.isArray(res) ? res : (res.data?.items || res.data || res.items || []);
+          if (!this.accepted(res)) return;
+          const list = this.readList(res);
           this.subjects.set(list);
           this.subjectsDataSource.data = list;
           this.cdr.detectChanges();
@@ -410,7 +516,8 @@ export class Curriculum implements OnInit, OnDestroy {
       this.curriculumService.updateSubject(editId, val)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
+          next: (res) => {
+            if (!this.accepted(res)) return;
             this.showSuccess('تم التعديل!', 'تم تحديث المادة الدراسية بنجاح');
             this.cancelEditSubject();
             this.loadSubjects();
@@ -421,7 +528,8 @@ export class Curriculum implements OnInit, OnDestroy {
       this.curriculumService.createSubject(val)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
+          next: (res) => {
+            if (!this.accepted(res)) return;
             this.showSuccess('تمت الإضافة!', 'تم إضافة المادة الدراسية بنجاح');
             this.subjectForm.reset({ isShared: false, curriculumIds: [], gradeLevelIds: [] });
             this.loadSubjects();
@@ -467,7 +575,8 @@ export class Curriculum implements OnInit, OnDestroy {
         this.curriculumService.deleteSubject(id)
           .pipe(takeUntil(this.destroy$))
           .subscribe({
-            next: () => {
+            next: (res) => {
+            if (!this.accepted(res)) return;
               this.showSuccess('تم الحذف!', 'تم حذف المادة بنجاح');
               this.loadSubjects();
             },

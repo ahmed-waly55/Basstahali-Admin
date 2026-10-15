@@ -1,0 +1,7 @@
+.course-fields { display: grid; grid-template-columns: 1fr; gap: 1rem; padding: 1rem; border: 1px solid #e5e0ed; border-radius: 1rem; }
+.course-fields legend { color: #4c2481; font-size: .8rem; font-weight: 700; padding-inline: .4rem; }
+.course-fields label { display: flex; flex-direction: column; gap: .4rem; color: #475569; font-size: .75rem; }
+.course-fields input, .course-fields textarea { width: 100%; padding: .65rem .8rem; border: 1px solid #e2e8f0; border-radius: .75rem; background: #f8fafc; color: #1e293b; }
+.course-fields input:focus, .course-fields textarea:focus { outline: 2px solid #bda1dd; outline-offset: 1px; }
+.course-fields input.ng-invalid.ng-touched { border-color: #e11d48; }
+@media (min-width: 768px) { .course-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
