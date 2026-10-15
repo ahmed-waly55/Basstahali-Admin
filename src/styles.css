@@ -17,17 +17,40 @@
 }
 
 :root {
+  --admin-canvas: #f5f6fa;
+  --admin-surface: #fff;
+  --admin-surface-soft: #f6f7fb;
+  --admin-border: #e7e9f0;
+  --admin-ink: #232638;
+  --admin-muted: #6e758a;
+  --admin-primary: #6241a5;
+  --admin-primary-soft: #f0ebf8;
+  --admin-on-primary: #fff;
+  --admin-gold: #efb935;
+  --mat-sys-surface: var(--admin-canvas);
+  --mat-sys-on-surface: var(--admin-ink);
+  --mat-sys-on-surface-variant: var(--admin-muted);
+  --mat-sys-outline: #8b92a6;
+  --mat-sys-outline-variant: var(--admin-border);
+  --mat-sys-surface-container: var(--admin-surface);
+  --mat-sys-surface-container-low: var(--admin-surface);
+  --mat-sys-surface-container-high: var(--admin-surface-soft);
+  --mat-sys-surface-container-highest: var(--admin-surface-soft);
+  --mat-sys-surface-container-lowest: var(--admin-surface);
+  --mat-sys-surface-bright: var(--admin-surface);
+  --mat-sys-surface-dim: var(--admin-canvas);
+
   --brand: #582b91;
   --brand-deep: #32145c;
   --brand-gold: #f5bd08;
-  --mat-sys-primary: #582b91;
-  --mat-sys-on-primary: #fff;
-  --mat-sys-primary-container: #eee5f9;
-  --mat-sys-on-primary-container: #32145c;
+  --mat-sys-primary: var(--admin-primary);
+  --mat-sys-on-primary: var(--admin-on-primary);
+  --mat-sys-primary-container: var(--admin-primary-soft);
+  --mat-sys-on-primary-container: var(--admin-primary);
   --mat-sys-body-medium-font: 'Tajawal', 'Segoe UI', sans-serif;
 }
 html, body { min-height: 100%; }
-body { margin: 0; background: #f7f6fa; color: #272235; font-family: var(--font-sans); }
+body { margin: 0; background: var(--admin-canvas); color: var(--admin-ink); font-family: var(--font-sans); }
 button, input, select, textarea { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 a, button, input, select, textarea { outline-offset: 4px; }
@@ -39,8 +62,66 @@ a, button, input, select, textarea { outline-offset: 4px; }
 .mat-mdc-row:hover { background-color: #faf7fe; }
 .brand-eyebrow { color: #785b9b; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
 .brand-title { color: #32145c; font-size: clamp(24px, 3vw, 34px); font-weight: 800; line-height: 1.5; }
-.brand-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border-radius: 12px; background: #582b91; color: white; font-size: 13px; font-weight: 700; text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: background .2s; }
-.brand-button:hover { background: #3e1e6b; }
-.brand-button.secondary { background: white; color: #582b91; border-color: #e4daef; }
-.brand-button.secondary:hover { background: #f5f0fc; }
+.brand-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border-radius: 9px; background: var(--admin-primary); color: var(--admin-on-primary); font-size: 13px; font-weight: 700; text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: background .2s; }
+.brand-button:hover { filter: brightness(.94); }
+.brand-button.secondary { background: var(--admin-surface); color: var(--admin-primary); border-color: var(--admin-border); }
+.brand-button.secondary:hover { background: var(--admin-primary-soft); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+
+html[data-theme='dark'] {
+  --admin-canvas: #12151f;
+  --admin-surface: #1c2030;
+  --admin-surface-soft: #242a3c;
+  --admin-border: #343b50;
+  --admin-ink: #edf0f7;
+  --admin-muted: #abb3c9;
+  --admin-primary: #b699ed;
+  --admin-primary-soft: #322747;
+  --admin-on-primary: #1a102e;
+  --mat-sys-outline: #8b95af;
+  --color-slate-50: #1c2231;
+  --color-slate-100: #242b3c;
+  --color-slate-200: #343e52;
+  --color-slate-300: #66738c;
+  --color-slate-400: #a2adc3;
+  --color-slate-500: #b4bdd0;
+  --color-slate-600: #c3cadf;
+  --color-slate-700: #d2d9e9;
+  --color-slate-800: #e1e7f2;
+  --color-slate-900: #edf0f7;
+  --color-gray-50: #1c2231;
+  --color-gray-100: #242b3c;
+  --color-gray-200: #343e52;
+  --color-gray-300: #66738c;
+  --color-gray-400: #a2adc3;
+  --color-gray-500: #b4bdd0;
+  --color-gray-600: #c3cadf;
+  --color-gray-700: #d2d9e9;
+  --color-gray-800: #e1e7f2;
+  --color-gray-900: #edf0f7;
+  --color-indigo-50: #2c2540;
+  --color-indigo-100: #382b50;
+  --color-indigo-200: #6b518e;
+  --color-indigo-300: #a389c7;
+  --color-indigo-400: #b79bdf;
+  --color-indigo-500: #b699ed;
+  --color-indigo-600: #b699ed;
+  --color-indigo-700: #ceb5f4;
+  --color-indigo-800: #dfcdf8;
+  --color-indigo-900: #eee3fd;
+}
+.admin-notifications-menu.mat-mdc-menu-panel { min-width: min(350px, calc(100vw - 24px)); max-width: min(380px, calc(100vw - 24px)); }
+.admin-navigation-dialog .mat-mdc-dialog-surface { border-radius: 14px; }
+html[data-theme='dark'] :is(.bg-white,[class~='!bg-white'],[class~='bg-white!'],.bg-white\/80) { background-color: var(--admin-surface) !important; }
+html[data-theme='dark'] .admin-main :is([class~='bg-[#f8fafc]'],[class~='bg-[#f7f6fa]'],[class~='bg-[#fafafa]']) { background: var(--admin-canvas) !important; }
+html[data-theme='dark'] .admin-main :is([class~='text-[#311060]'],[class~='text-[#2d1254]'],[class~='!text-[#311060]']) { color: var(--admin-primary) !important; }
+html[data-theme='dark'] .admin-main :is(.bg-purple-50,.bg-purple-100,.bg-blue-50) { background-color: var(--admin-primary-soft); color: var(--admin-primary); }
+html[data-theme='dark'] .admin-main :is(.bg-emerald-50,.bg-green-50) { background-color: #18372f; color: #96d9b7; }
+html[data-theme='dark'] .admin-main :is(.bg-rose-50,.bg-red-50) { background-color: #3f2634; color: #f5a6b4; }
+html[data-theme='dark'] .admin-main :is(.bg-amber-50,.bg-yellow-50) { background-color: #3b3320; color: #e9cf86; }
+html[data-theme='dark'] :is(.bg-slate-950\/40,.bg-slate-900\/40,.bg-slate-950\/60) { background-color: #0009 !important; }
+.swal2-popup { background: var(--admin-surface); color: var(--admin-ink); border: 1px solid var(--admin-border); }
+.swal2-input,.swal2-textarea,.swal2-select { background: var(--admin-surface-soft); color: var(--admin-ink); border-color: var(--admin-border); }
+@layer theme {
+  html[data-theme='dark'] :is([class~='!bg-white'],[class~='bg-white!']) { background-color: var(--admin-surface) !important; }
+}

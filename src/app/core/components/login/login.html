@@ -1,96 +1,66 @@
-<div class="login-shell" dir="rtl">
-  <section class="login-story" aria-label="أكاديمية بسطهالي">
-    <a class="story-wordmark" href="/">بسط<span>هالي</span><small>BASSTAHALI ACADEMY</small></a>
-    <div class="story-center"><span class="story-kicker">وراء كل تجربة تعليم مميزة، إدارة مميزة</span><h2>إدارة أبسط.<br />أثر <em>أكبر.</em></h2><p>طلابك، معلموك، وكل تفاصيل أكاديميتك.<br />مساحة واحدة تجمع كل اللي تحتاجه.</p><div class="story-logo"><img src="favicon.png" alt="شعار أكاديمية بسطهالي" width="190" height="190" /></div></div>
-    <p class="story-footer">بسطهالي — معاك في كل خطوة</p>
-  </section>
-  <div class="login-form-area">
-
-  <!-- بطاقة تسجيل الدخول -->
-  <div class="login-card">
-
-    <!-- الشعار والعنوان -->
-    <div class="flex flex-col items-center text-center mb-6">
-      <img class="login-logo" src="favicon.png" alt="بسطهالي" width="90" height="90" />
-      <h1 class="text-xl sm:text-2xl font-black text-slate-900">أهلًا بيك من جديد</h1>
-      <span class="text-xs text-slate-400 font-medium mt-0.5">سجّل دخولك لمتابعة وإدارة أكاديميتك</span>
+<main class="admin-login" dir="rtl">
+  <button type="button" class="login-theme-toggle" (click)="theme.toggle()"
+    [attr.aria-label]="theme.isDark() ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'" [attr.aria-pressed]="theme.isDark()">
+    <mat-icon aria-hidden="true">{{ theme.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    <span>{{ theme.isDark() ? 'الوضع الفاتح' : 'الوضع الداكن' }}</span>
+  </button>
+  <div class="login-container">
+    <div class="login-brand">
+      <img src="favicon.png" alt="شعار بسطهالي" width="64" height="64" />
+      <div><strong>بسطهالي</strong><span>لوحة إدارة الأكاديمية</span></div>
     </div>
 
-    <!-- النموذج -->
-    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-3.5">
+    <section class="login-card" aria-labelledby="login-title">
+      <header class="login-heading">
+        <span class="login-label"><mat-icon aria-hidden="true">admin_panel_settings</mat-icon>منطقة الإدارة</span>
+        <h1 id="login-title">تسجيل دخول الإدارة</h1>
+        <p>استخدم حسابك الإداري للوصول إلى لوحة التحكم.</p>
+      </header>
 
-      <!-- حقل البريد أو الهاتف (بدون placeholder) -->
-      <mat-form-field appearance="outline" class="w-full custom-mat-field">
-        <mat-label>البريد الإلكتروني أو رقم الهاتف</mat-label>
-        <input
-          matInput
-          type="text"
-          formControlName="userName"
-          autocomplete="username" />
-        <mat-icon matPrefix class="text-slate-400 ms-2">person_outline</mat-icon>
-
-        @if (loginForm.get('userName')?.hasError('required') && loginForm.get('userName')?.touched) {
-          <mat-error>هذا الحقل مطلوب.</mat-error>
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" [attr.aria-busy]="isSubmitting()" class="login-form">
+        @if (loginError()) {
+          <div class="login-error" role="alert">
+            <mat-icon aria-hidden="true">error_outline</mat-icon><p>{{ loginError() }}</p>
+          </div>
         }
-        @if (loginForm.get('userName')?.hasError('invalidEmailOrPhone') && loginForm.get('userName')?.touched) {
-          <mat-error>بريد إلكتروني أو رقم هاتف غير صحيح.</mat-error>
-        }
-      </mat-form-field>
 
-      <!-- حقل كلمة المرور -->
-      <mat-form-field appearance="outline" class="w-full custom-mat-field">
-        <mat-label>كلمة المرور</mat-label>
-        <input
-          matInput
-          [type]="hidePassword ? 'password' : 'text'"
-          formControlName="password"
-          placeholder="••••••••"
-          autocomplete="current-password" />
-        <mat-icon matPrefix class="text-slate-400 ms-2">lock_outline</mat-icon>
+        <mat-form-field appearance="outline" class="login-field">
+          <mat-label>البريد الإلكتروني أو رقم الهاتف</mat-label>
+          <input matInput type="text" formControlName="userName" autocomplete="username" dir="ltr" required />
+          <mat-icon matPrefix aria-hidden="true">person_outline</mat-icon>
+          @if (loginForm.get('userName')?.hasError('required') && loginForm.get('userName')?.touched) {
+            <mat-error>أدخل البريد الإلكتروني أو رقم الهاتف.</mat-error>
+          }
+          @if (loginForm.get('userName')?.hasError('invalidEmailOrPhone') && loginForm.get('userName')?.touched) {
+            <mat-error>أدخل بريدًا إلكترونيًا أو رقم هاتف صحيحًا.</mat-error>
+          }
+        </mat-form-field>
 
-        <button
-          type="button"
-          mat-icon-button
-          matSuffix
-          (click)="hidePassword = !hidePassword"
-          [attr.aria-label]="hidePassword ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور'"
-          class="text-slate-400 hover:text-slate-600">
-          <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+        <mat-form-field appearance="outline" class="login-field">
+          <mat-label>كلمة المرور</mat-label>
+          <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" autocomplete="current-password" dir="ltr" required />
+          <mat-icon matPrefix aria-hidden="true">lock_outline</mat-icon>
+          <button type="button" mat-icon-button matSuffix (click)="hidePassword = !hidePassword"
+            [attr.aria-label]="hidePassword ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور'" [attr.aria-pressed]="!hidePassword">
+            <mat-icon aria-hidden="true">{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (loginForm.get('password')?.hasError('required') && loginForm.get('password')?.touched) {
+            <mat-error>أدخل كلمة المرور.</mat-error>
+          }
+          @if (loginForm.get('password')?.hasError('minlength') && loginForm.get('password')?.touched) {
+            <mat-error>كلمة المرور لا تقل عن 6 خانات.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-checkbox formControlName="rememberMe" class="login-remember">تذكر تسجيل الدخول</mat-checkbox>
+        <button mat-flat-button type="submit" [disabled]="loginForm.invalid || isSubmitting()" class="login-submit">
+          @if (isSubmitting()) { <span class="login-spinner" aria-hidden="true"></span> }
+          <span>{{ isSubmitting() ? 'جارٍ تسجيل الدخول…' : 'تسجيل الدخول' }}</span>
+          <mat-icon iconPositionEnd aria-hidden="true" [style.display]="isSubmitting() ? 'none' : null">arrow_back</mat-icon>
         </button>
-
-        @if (loginForm.get('password')?.hasError('required') && loginForm.get('password')?.touched) {
-          <mat-error>كلمة المرور مطلوبة.</mat-error>
-        }
-        @if (loginForm.get('password')?.hasError('minlength') && loginForm.get('password')?.touched) {
-          <mat-error>لا تقل عن 6 خانات.</mat-error>
-        }
-      </mat-form-field>
-
-      <!-- تذكرني -->
-      <div class="flex items-center justify-between text-xs pt-0.5">
-        <mat-checkbox formControlName="rememberMe" class="custom-checkbox text-slate-600 font-medium">
-          تذكر تسجيل الدخول
-        </mat-checkbox>
-      </div>
-
-      <!-- زر الدخول -->
-      <button
-        mat-flat-button
-        type="submit"
-        [disabled]="loginForm.invalid"
-        class="login-btn !h-12 !rounded-xl !text-white !font-bold !text-sm !transition-all mt-2 flex items-center justify-center gap-2">
-        <span>تسجيل الدخول</span>
-        <mat-icon class="!w-5 !h-5 !text-[20px]">arrow_back</mat-icon>
-      </button>
-
-    </form>
-
+      </form>
+      <div class="login-access"><mat-icon aria-hidden="true">lock_outline</mat-icon><span>الوصول مخصص لفريق إدارة الأكاديمية.</span></div>
+    </section>
+    <p class="login-footer">بسطهالي أكاديمي · إدارة النظام</p>
   </div>
-
-  <!-- التذييل -->
-  <p class="text-xs text-slate-400 mt-6 text-center">
-    &copy; 2026 أكاديمية بسطهالي • إدارة النظام
-  </p>
-
-</div>
-</div>
+</main>

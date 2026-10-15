@@ -1,42 +1,55 @@
 <section dir="rtl" class="finance-page">
-  <header class="page-heading"><div><span class="eyebrow">إدارة مالية بسطهالي</span><h1>الفترات والرواتب</h1><p>نظّم الفترات المالية ونسب الشركاء وراجع رواتب فريق الأكاديمية.</p></div><button mat-stroked-button [disabled]="loading() || pending()" (click)="refresh()"><mat-icon>refresh</mat-icon> تحديث البيانات</button></header>
+  <header class="page-heading"><div><h1>الفترات والرواتب</h1><p>راجع الفترات المالية ورواتب الفريق ونسب الشركاء.</p></div><button mat-stroked-button [disabled]="loading() || pending()" (click)="refresh()"><mat-icon>refresh</mat-icon> تحديث البيانات</button></header>
   @if (error()) { <div role="alert" class="error-banner">{{ error() }}</div> }
   @if (success()) { <div role="status" class="success-banner">{{ success() }}</div> }
   @if (loading()) { <p role="status" class="loading">جارٍ تحميل البيانات…</p> }
-  <mat-tab-group animationDuration="0ms">
+  <mat-tab-group animationDuration="0ms" aria-label="أقسام الإدارة المالية">
     <mat-tab label="الفترات المالية"><div class="tab-content">
       @if (notices()['periods']) { <div role="alert" class="error-banner">{{ notices()['periods'] }} <button mat-button (click)="loadPeriods()">إعادة المحاولة</button></div> }
-      <div class="panel"><div class="panel-heading"><h2>الفترات المسجلة</h2><span>راجع الفترة قبل إغلاقها</span></div><div class="table-scroll"><table><thead><tr><th>البداية</th><th>النهاية</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>
-        @for (period of periods(); track period.id || $index) { <tr><td>{{ period.startDate | date:'yyyy/MM/dd' }}</td><td>{{ period.endDate | date:'yyyy/MM/dd' }}</td><td><span class="badge">{{ isClosed(period) ? 'مغلقة' : (period.status || '—') }}</span></td><td><button mat-stroked-button [disabled]="!period.id || isClosed(period) || pending()" (click)="closePeriod(period)">إغلاق الفترة</button></td></tr> }
+      <div class="panel"><div class="panel-heading"><div><h2>الفترات المسجلة</h2><p>راجع بداية الفترة ونهايتها قبل إغلاقها.</p></div><button mat-flat-button [disabled]="pending()" (click)="showPeriodForm.set(true)"><mat-icon>add</mat-icon>إنشاء فترة مالية</button></div><div class="table-scroll"><table><thead><tr><th>البداية</th><th>النهاية</th><th>الحالة</th><th>الإجراء</th></tr></thead><tbody>
+        @for (period of periods(); track period.id || $index) { <tr><td>{{ period.startDate | date:'yyyy/MM/dd' }}</td><td>{{ period.endDate | date:'yyyy/MM/dd' }}</td><td><span class="badge" [class.closed]="isClosed(period)">{{ isClosed(period) ? 'مغلقة' : (period.status || '—') }}</span></td><td><button mat-stroked-button [disabled]="!period.id || isClosed(period) || pending()" (click)="closePeriod(period)">إغلاق الفترة</button></td></tr> }
         @empty { <tr><td colspan="4" class="empty">لا توجد فترات مالية معروضة.</td></tr> }
       </tbody></table></div></div>
-      <div class="panel"><div class="panel-heading"><h2>إنشاء فترة مالية</h2></div><form [formGroup]="periodForm" (ngSubmit)="createPeriod()" class="form-grid">
+      @if (showPeriodForm()) { <div class="modal-backdrop"><section class="finance-dialog" role="dialog" aria-modal="true" aria-labelledby="period-dialog-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="!pending() && showPeriodForm.set(false)"><div class="dialog-heading"><h2 id="period-dialog-title">إنشاء فترة مالية</h2><button mat-icon-button aria-label="إلغاء إنشاء الفترة" [disabled]="pending()" (click)="showPeriodForm.set(false)"><mat-icon>close</mat-icon></button></div>@if (error()) { <p role="alert" class="error-banner">{{ error() }}</p> }<form [formGroup]="periodForm" (ngSubmit)="createPeriod()" class="form-grid">
         <mat-form-field appearance="outline"><mat-label>تاريخ البداية</mat-label><input matInput type="date" formControlName="startDate"><mat-error>اختر تاريخ البداية</mat-error></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>تاريخ النهاية</mat-label><input matInput type="date" formControlName="endDate"><mat-error>اختر تاريخ النهاية</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>تاريخ النهاية</mat-label><input matInput type="date" formControlName="endDate" [min]="periodForm.controls.startDate.value"><mat-error>اختر تاريخ النهاية</mat-error></mat-form-field>
         @if (periodForm.hasError('dateOrder')) { <p class="form-error full">تاريخ النهاية يجب أن يكون بعد البداية أو مساوياً لها.</p> }
-        <div class="full"><button mat-flat-button class="primary-action" [disabled]="periodForm.invalid || pending()">إنشاء الفترة</button></div>
-      </form></div>
+        <div class="full form-actions"><button mat-flat-button class="primary-action" [disabled]="periodForm.invalid || pending()">{{ pending() ? 'جارٍ الإنشاء…' : 'إنشاء الفترة' }}</button><button mat-button type="button" [disabled]="pending()" (click)="showPeriodForm.set(false)">إلغاء</button></div>
+      </form></section></div> }
     </div></mat-tab>
     <mat-tab label="نسب الشركاء"><div class="tab-content">
       @if (notices()['partners']) { <div role="alert" class="error-banner">{{ notices()['partners'] }} <button mat-button (click)="loadPartners()">إعادة المحاولة</button></div> }
-      <div class="panel"><div class="panel-heading"><h2>إضافة نسبة شريك</h2><span>حدّد نسبة الشريك ومدة سريانها</span></div><form [formGroup]="shareForm" (ngSubmit)="createShare()" class="form-grid">
+      <div class="panel"><div class="panel-heading"><div><h2>إضافة نسبة شريك</h2><p>اختر الشريك وحدد النسبة وفترة سريانها قبل الحفظ.</p></div></div><form [formGroup]="shareForm" (ngSubmit)="createShare()" class="form-grid">
         <mat-form-field appearance="outline"><mat-label>الشريك</mat-label><mat-select formControlName="partnerId">@for (partner of partners(); track partner.id) { <mat-option [value]="partner.id">{{ partner.fullName || partner.name || partner.email }}</mat-option> }</mat-select><mat-error>اختر الشريك</mat-error></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>النسبة المئوية</mat-label><input matInput type="number" min="0.01" max="100" step="0.01" formControlName="percentage"><span matTextSuffix>%</span><mat-error>أدخل نسبة أكبر من صفر وحتى 100</mat-error></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>سارية من</mat-label><input matInput type="date" formControlName="effectiveFrom"><mat-error>اختر التاريخ</mat-error></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>سارية حتى</mat-label><input matInput type="date" formControlName="effectiveTo"><mat-error>اختر التاريخ</mat-error></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>سارية حتى</mat-label><input matInput type="date" formControlName="effectiveTo" [min]="shareForm.controls.effectiveFrom.value"><mat-error>اختر التاريخ</mat-error></mat-form-field>
         @if (shareForm.hasError('dateOrder')) { <p class="form-error full">نهاية المدة يجب أن تكون بعد بدايتها أو مساوية لها.</p> }
-        <div class="full"><button mat-flat-button class="primary-action" [disabled]="shareForm.invalid || pending()">حفظ نسبة الشريك</button></div>
+        <div class="full form-actions"><button mat-flat-button class="primary-action" [disabled]="shareForm.invalid || pending()">{{ pending() ? 'جارٍ الحفظ…' : 'حفظ نسبة الشريك' }}</button><button mat-button type="button" [disabled]="pending()" (click)="shareForm.reset()">مسح النموذج</button></div>
       </form></div>
     </div></mat-tab>
     <mat-tab label="رواتب المعلمين"><div class="tab-content">
       @if (notices()['teachers']) { <div role="alert" class="error-banner">{{ notices()['teachers'] }} <button mat-button (click)="loadTeachers()">إعادة المحاولة</button></div> }
-      <div class="panel"><div class="panel-heading"><h2>كشف رواتب المعلمين</h2><span>تعديل بيانات الراتب واعتماد المبلغ النهائي</span></div><div class="table-scroll"><table><thead><tr><th>المعلم</th><th>الحصص</th><th>المبلغ</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
-        @for (teacher of teachers(); track teacher.teacherId || $index) { <tr><td><strong>{{ teacher.teacherName || teacher.fullName || teacher.name }}</strong></td><td>{{ teacher.sessionCount ?? '—' }}</td><td>{{ (teacher.finalAmount ?? teacher.netSalary ?? teacher.totalAmount ?? 0) | number:'1.2-2' }} {{ teacher.currency || '' }}</td><td>{{ teacher.status || '—' }}</td><td><button mat-stroked-button [disabled]="!teacherId(teacher) || pending()" (click)="chooseTeacher(teacher)">مراجعة الراتب</button>@if (teacher.targetType) { <button mat-button [disabled]="pending()" (click)="chooseAdjustment(teacher)">مكافأة</button> }</td></tr> }
+      <div class="panel"><div class="panel-heading"><div><h2>كشف رواتب المعلمين</h2><p>افتح سجل المعلم لمراجعة الفترة وتعديل الراتب أو اعتماده.</p></div></div><div class="table-scroll"><table><thead><tr><th>المعلم / الفترة</th><th>الحصص</th><th>المبلغ</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
+        @for (teacher of teachers(); track teacher.teacherId || $index) { <tr><td><strong>{{ teacher.teacherName || teacher.fullName || teacher.name }}</strong><small class="row-context">{{ teacher.from ? (teacher.from | date:'yyyy/MM/dd') : '—' }} – {{ teacher.to ? (teacher.to | date:'yyyy/MM/dd') : '—' }}</small></td><td>{{ teacher.sessionCount ?? '—' }}</td><td class="money">{{ (teacher.finalAmount ?? teacher.netSalary ?? teacher.totalAmount) != null ? ((teacher.finalAmount ?? teacher.netSalary ?? teacher.totalAmount) | number:'1.2-2') : '—' }} <small>{{ teacher.currency || '' }}</small></td><td><span class="badge">{{ teacher.status || '—' }}</span></td><td class="row-actions"><button mat-stroked-button [disabled]="!teacherId(teacher) || pending()" (click)="chooseTeacher(teacher)">مراجعة الراتب</button>@if (teacher.targetType) { <button mat-button [disabled]="pending()" (click)="chooseAdjustment(teacher)">مكافأة</button> }</td></tr> }
         @empty { <tr><td colspan="5" class="empty">لا توجد رواتب معلمين معروضة.</td></tr> }
       </tbody></table></div></div>
-      @if (selectedTeacher(); as teacher) {
-        <div class="panel"><div class="panel-heading"><h2>تعديل راتب {{ teacher.teacherName || teacher.fullName || teacher.name }}</h2><button mat-button [disabled]="pending()" (click)="selectedTeacher.set(null)">إغلاق</button></div>
-          <form [formGroup]="payrollForm" (ngSubmit)="savePayroll()" class="form-grid">
+    </div></mat-tab>
+    <mat-tab label="رواتب المشرفين"><div class="tab-content">
+      @if (notices()['moderators']) { <div role="alert" class="error-banner">{{ notices()['moderators'] }} <button mat-button (click)="loadModerators()">إعادة المحاولة</button></div> }
+      <div class="panel"><div class="panel-heading"><h2>كشف رواتب المشرفين</h2></div><div class="table-scroll"><table><thead><tr><th>المشرف</th><th>المبلغ</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
+        @for (moderator of moderators(); track moderator.moderatorId || $index) { <tr><td>{{ moderator.moderatorName || moderator.fullName || moderator.name }}</td><td class="money">{{ (moderator.finalAmount ?? moderator.netSalary ?? moderator.totalAmount) != null ? ((moderator.finalAmount ?? moderator.netSalary ?? moderator.totalAmount) | number:'1.2-2') : '—' }} <small>{{ moderator.currency || '' }}</small></td><td><span class="badge">{{ moderator.status || '—' }}</span></td><td>@if (moderator.targetType) { <button mat-stroked-button [disabled]="pending()" (click)="chooseAdjustment(moderator)">إضافة مكافأة</button> } @else { <span>—</span> }</td></tr> }
+        @empty { <tr><td colspan="4" class="empty">لا توجد رواتب مشرفين معروضة.</td></tr> }
+      </tbody></table></div></div>
+    </div></mat-tab>
+  </mat-tab-group>
+  @if (selectedTeacher(); as teacher) {
+    <div class="modal-backdrop"><section class="finance-dialog" role="dialog" aria-modal="true" aria-labelledby="payroll-dialog-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="!pending() && selectedTeacher.set(null)">
+      <header class="dialog-heading"><div><h2 id="payroll-dialog-title">مراجعة الراتب</h2><p>{{ teacher.teacherName || teacher.fullName || teacher.name }} @if (teacher.currency) { · {{ teacher.currency }} }</p></div><button mat-icon-button aria-label="إغلاق مراجعة الراتب" [disabled]="pending()" (click)="selectedTeacher.set(null)"><mat-icon>close</mat-icon></button></header>
+      @if (error()) { <p role="alert" class="error-banner">{{ error() }}</p> }
+      @if (success()) { <p role="status" class="success-banner">{{ success() }}</p> }
+      <nav class="editor-tabs" aria-label="إجراءات الراتب"><button type="button" [class.active]="salaryStep() === 'edit'" [attr.aria-current]="salaryStep() === 'edit' ? 'page' : null" [disabled]="pending()" (click)="salaryStep.set('edit')">تعديل بيانات الراتب</button><button type="button" [class.active]="salaryStep() === 'approval'" [attr.aria-current]="salaryStep() === 'approval' ? 'page' : null" [disabled]="pending()" (click)="salaryStep.set('approval')">اعتماد المبلغ النهائي</button></nav>
+      @if (salaryStep() === 'edit') { <form [formGroup]="payrollForm" (ngSubmit)="savePayroll()" class="form-grid">
             <mat-form-field appearance="outline"><mat-label>الفترة من</mat-label><input matInput type="date" formControlName="from"><mat-error>اختر التاريخ</mat-error></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>الفترة إلى</mat-label><input matInput type="date" formControlName="to"><mat-error>اختر التاريخ</mat-error></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>عدد الحصص</mat-label><input matInput type="number" min="0" step="1" formControlName="sessionCount"><mat-error>أدخل عدداً صحيحاً لا يقل عن صفر</mat-error></mat-form-field>
@@ -47,31 +60,22 @@
             <mat-form-field appearance="outline"><mat-label>سبب الخصم</mat-label><input matInput formControlName="deductionReason"></mat-form-field>
             <mat-form-field appearance="outline" class="full"><mat-label>ملاحظات</mat-label><textarea matInput rows="2" formControlName="notes"></textarea></mat-form-field>
             @if (payrollForm.hasError('dateOrder')) { <p class="form-error full">راجع ترتيب تاريخي الفترة.</p> }
-            <div class="full"><button mat-flat-button class="primary-action" [disabled]="payrollForm.invalid || pending()">حفظ تعديل الراتب</button></div>
-          </form>
-        </div>
-        <div class="panel"><div class="panel-heading"><h2>اعتماد الراتب النهائي</h2><span>راجع الفترة والمبلغ قبل الاعتماد</span></div><form [formGroup]="approvalForm" (ngSubmit)="approvePayroll()" class="form-grid">
+            <div class="full form-actions"><button mat-flat-button class="primary-action" [disabled]="payrollForm.invalid || pending()">{{ pending() ? 'جارٍ الحفظ…' : 'حفظ تعديل الراتب' }}</button><button mat-button type="button" [disabled]="pending()" (click)="selectedTeacher.set(null)">إلغاء</button></div>
+          </form> }
+      @else { <p class="approval-note">راجع الفترة والمبلغ النهائي قبل الاعتماد.</p> <form [formGroup]="approvalForm" (ngSubmit)="approvePayroll()" class="form-grid">
           <mat-form-field appearance="outline"><mat-label>الفترة من</mat-label><input matInput type="date" formControlName="from"><mat-error>اختر التاريخ</mat-error></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>الفترة إلى</mat-label><input matInput type="date" formControlName="to"><mat-error>اختر التاريخ</mat-error></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>المبلغ النهائي</mat-label><input matInput type="number" min="0" step="0.01" formControlName="finalAmount"><mat-error>أدخل مبلغاً لا يقل عن صفر</mat-error></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>ملاحظات الاعتماد</mat-label><input matInput formControlName="notes"></mat-form-field>
           @if (approvalForm.hasError('dateOrder')) { <p class="form-error full">راجع ترتيب تاريخي الفترة.</p> }
-          <div class="full"><button mat-flat-button class="primary-action" [disabled]="approvalForm.invalid || pending()">اعتماد الراتب</button></div>
-        </form></div>
-      }
-    </div></mat-tab>
-    <mat-tab label="رواتب المشرفين"><div class="tab-content">
-      @if (notices()['moderators']) { <div role="alert" class="error-banner">{{ notices()['moderators'] }} <button mat-button (click)="loadModerators()">إعادة المحاولة</button></div> }
-      <div class="panel"><div class="panel-heading"><h2>كشف رواتب المشرفين</h2></div><div class="table-scroll"><table><thead><tr><th>المشرف</th><th>المبلغ</th><th>الحالة</th><th>الإجراءات</th></tr></thead><tbody>
-        @for (moderator of moderators(); track moderator.moderatorId || $index) { <tr><td>{{ moderator.moderatorName || moderator.fullName || moderator.name }}</td><td>{{ (moderator.finalAmount ?? moderator.netSalary ?? moderator.totalAmount ?? 0) | number:'1.2-2' }} {{ moderator.currency || '' }}</td><td>{{ moderator.status || '—' }}</td><td>@if (moderator.targetType) { <button mat-stroked-button [disabled]="pending()" (click)="chooseAdjustment(moderator)">إضافة مكافأة</button> } @else { <span>—</span> }</td></tr> }
-        @empty { <tr><td colspan="4" class="empty">لا توجد رواتب مشرفين معروضة.</td></tr> }
-      </tbody></table></div></div>
-    </div></mat-tab>
-  </mat-tab-group>
-  @if (selectedAdjustment(); as target) { <div class="panel adjustment-panel"><div class="panel-heading"><h2>إضافة مكافأة: {{ target.teacherName || target.moderatorName || target.fullName || target.name }}</h2><button mat-button [disabled]="pending()" (click)="selectedAdjustment.set(null)">إلغاء</button></div><form [formGroup]="adjustmentForm" (ngSubmit)="saveAdjustment()" class="form-grid">
+          <div class="full form-actions"><button mat-flat-button class="primary-action" [disabled]="approvalForm.invalid || pending()">{{ pending() ? 'جارٍ الاعتماد…' : 'اعتماد الراتب' }}</button><button mat-button type="button" [disabled]="pending()" (click)="selectedTeacher.set(null)">إلغاء</button></div>
+        </form> }
+    </section></div>
+  }
+  @if (selectedAdjustment(); as target) { <div class="modal-backdrop"><section class="finance-dialog" role="dialog" aria-modal="true" aria-labelledby="adjustment-dialog-title" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="!pending() && selectedAdjustment.set(null)"><div class="dialog-heading"><h2 id="adjustment-dialog-title">إضافة مكافأة: {{ target.teacherName || target.moderatorName || target.fullName || target.name }}</h2><button mat-button [disabled]="pending()" (click)="selectedAdjustment.set(null)">إلغاء</button></div>@if (error()) { <p role="alert" class="error-banner">{{ error() }}</p> }<form [formGroup]="adjustmentForm" (ngSubmit)="saveAdjustment()" class="form-grid">
     <mat-form-field appearance="outline"><mat-label>مبلغ المكافأة</mat-label><input matInput type="number" min="0.01" step="0.01" formControlName="amount"><mat-error>أدخل مبلغاً أكبر من صفر</mat-error></mat-form-field>
     <mat-form-field appearance="outline"><mat-label>تاريخ السريان</mat-label><input matInput type="date" formControlName="effectiveDate"><mat-error>اختر التاريخ</mat-error></mat-form-field>
     <mat-form-field appearance="outline" class="full"><mat-label>سبب المكافأة</mat-label><textarea matInput rows="2" formControlName="reason"></textarea><mat-error>أدخل السبب</mat-error></mat-form-field>
-    <div class="full"><button mat-flat-button class="primary-action" [disabled]="adjustmentForm.invalid || pending()">إضافة المكافأة</button></div>
-  </form></div> }
+    <div class="full form-actions"><button mat-flat-button class="primary-action" [disabled]="adjustmentForm.invalid || pending()">{{ pending() ? 'جارٍ الإضافة…' : 'إضافة المكافأة' }}</button><button mat-button type="button" [disabled]="pending()" (click)="selectedAdjustment.set(null)">إلغاء</button></div>
+  </form></section></div> }
 </section>

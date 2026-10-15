@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
+import { A11yModule } from '@angular/cdk/a11y';
 import { Observable } from 'rxjs';
 import Swal from 'sweetalert2';
 import { FinanceManagementService } from '../../core/services/finance-management-service';
@@ -21,7 +22,7 @@ function orderedDates(start: string, end: string) {
 
 @Component({
   selector: 'app-finance-management', standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatTabsModule],
+  imports: [CommonModule, ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatIconModule, MatTabsModule, A11yModule],
   templateUrl: './finance-management.html', styleUrl: './finance-management.css'
 })
 export class FinanceManagement implements OnInit {
@@ -38,6 +39,8 @@ export class FinanceManagement implements OnInit {
   success = signal('');
   selectedTeacher = signal<any>(null);
   selectedAdjustment = signal<any>(null);
+  showPeriodForm = signal(false);
+  salaryStep = signal<'edit' | 'approval'>('edit');
   private activeLoads = 0;
   periodForm = this.fb.nonNullable.group({ startDate: ['', Validators.required], endDate: ['', Validators.required] }, { validators: orderedDates('startDate', 'endDate') });
   shareForm = this.fb.nonNullable.group({
@@ -100,7 +103,7 @@ export class FinanceManagement implements OnInit {
 
   createPeriod(): void {
     if (this.periodForm.invalid) { this.periodForm.markAllAsTouched(); return; }
-    void this.mutate('إنشاء فترة مالية؟', () => this.api.createFinancialPeriod(this.periodForm.getRawValue()), () => { this.periodForm.reset(); this.loadPeriods(); });
+    void this.mutate('إنشاء فترة مالية؟', () => this.api.createFinancialPeriod(this.periodForm.getRawValue()), () => { this.periodForm.reset(); this.showPeriodForm.set(false); this.loadPeriods(); });
   }
   isClosed(period: any): boolean { return period.isClosed === true || period.status === 'Closed' || !!period.closedAt; }
   closePeriod(period: any): void {
@@ -114,7 +117,9 @@ export class FinanceManagement implements OnInit {
   teacherId(item: any): string { return item.teacherId || item.teacher?.id || ''; }
   chooseTeacher(item: any): void {
     if (!this.teacherId(item) || this.pending()) return;
+    this.error.set(''); this.success.set('');
     this.selectedTeacher.set(item);
+    this.salaryStep.set('edit');
     const from = (item.from || '').slice(0, 10), to = (item.to || '').slice(0, 10);
     this.payrollForm.setValue({ from, to, sessionCount: Number(item.sessionCount || 0), sessionRate: Number(item.sessionRate || 0),
       bonus: Number(item.bonus ?? item.totalBonus ?? 0), bonusReason: item.bonusReason || '', deduction: Number(item.deduction ?? item.totalDeductions ?? 0),
@@ -134,6 +139,7 @@ export class FinanceManagement implements OnInit {
   chooseAdjustment(item: any): void {
     // The contract does not enumerate targetType. Reuse only a server-provided value.
     if (!item.targetType || !(item.targetId || item.teacherId || item.moderatorId) || this.pending()) return;
+    this.error.set(''); this.success.set('');
     this.selectedAdjustment.set(item);
   }
   saveAdjustment(): void {

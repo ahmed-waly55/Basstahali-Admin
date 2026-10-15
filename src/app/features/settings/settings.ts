@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import Swal from 'sweetalert2';
+import { ThemeService } from '../../core/services/theme';
 import { Auth } from '../../core/services/auth';
 
 @Component({
@@ -24,6 +25,7 @@ import { Auth } from '../../core/services/auth';
   styleUrl: './settings.css',
 })
 export class Settings {
+  readonly theme = inject(ThemeService);
   private _FormBuilder = inject(FormBuilder);
   private _Auth = inject(Auth);
   private _Router = inject(Router);
@@ -38,6 +40,7 @@ export class Settings {
   });
 
   onSubmit() {
+    if (this.isLoading) return;
     if (this.changePasswordForm.invalid) {
       this.changePasswordForm.markAllAsTouched();
       return;
@@ -48,10 +51,11 @@ export class Settings {
     this._Auth.changePassword(this.changePasswordForm.value).subscribe({
       next: (res) => {
         this.isLoading = false;
+        if (res?.success === false) { void Swal.fire('تعذر الحفظ', res.message || 'تعذر تغيير كلمة المرور.', 'error'); return; }
         this.changePasswordForm.reset();
 
         // مسح بيانات التخزين
-        localStorage.clear();
+        for (const key of ['token','accessToken','refreshToken','user']) localStorage.removeItem(key);
 
         // إظهار التنبيه برسالة السيرفر ثم التوجيه لصفحة تسجيل الدخول
         Swal.fire({

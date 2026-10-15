@@ -1,368 +1,80 @@
-<div class="w-full min-h-screen p-3 sm:p-6 lg:p-8 bg-[#f8fafc] font-sans" dir="rtl">
-
-  <!-- ================= ترويسة الصفحة ================= -->
-  <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-5">
-    <div class="flex items-center gap-2.5 sm:gap-3">
-      <button
-        mat-icon-button
-        matTooltip="الرجوع للخلف"
-        (click)="goBack()"
-        class="!w-9 !h-9 sm:!w-10 sm:!h-10 !rounded-xl !bg-white !border !border-slate-200 text-slate-700 hover:!bg-slate-100 shadow-xs transition-all flex items-center justify-center shrink-0">
-        <mat-icon class="!w-5 !h-5 !text-[20px]">arrow_forward</mat-icon>
-      </button>
-
-      <div>
-        <h1 class="text-lg sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-          <span>{{ showArchived() ? 'أرشيف الطلاب' : 'إدارة الطلاب' }}</span>
-          <span class="text-[11px] sm:text-xs px-2 py-0.5 rounded-full bg-purple-50 text-[#311060] font-bold border border-purple-200/50">
-            {{ dataSource.filteredData.length }} طالب
-          </span>
-        </h1>
-        <p class="text-[11px] sm:text-xs text-slate-400 font-medium">متابعة الحسابات والحصص المسجلة في بسطهالي</p>
-      </div>
-    </div>
-
-    <!-- أزرار العمليات (متجاوبة تماماً للموبايل) -->
-    <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-      <button type="button" class="brand-button secondary" (click)="toggleArchive()" [disabled]="loading() || saving()">{{ showArchived() ? 'الطلاب الحاليون' : 'الأرشيف' }}</button>
-      <button
-        mat-stroked-button
-        (click)="exportToExcel()"
-        matTooltip="تصدير إلى Excel"
-        class="flex-1 sm:flex-initial !rounded-xl !border-slate-200 !bg-white hover:!bg-emerald-50 hover:!border-emerald-300 !text-slate-700 hover:!text-emerald-700 !font-bold !text-xs !h-9 sm:!h-10 transition-all">
-        <div class="flex items-center justify-center gap-1">
-          <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px] text-emerald-600">file_download</mat-icon>
-          <span>تصدير إكسيل</span>
-        </div>
-      </button>
-
-      <button
-        mat-flat-button
-        (click)="openModal()" [disabled]="showArchived() || saving()"
-        class="flex-1 sm:flex-initial !bg-[#311060] hover:!bg-[#220a45] !text-white !rounded-xl !font-bold !text-xs !h-9 sm:!h-10 !shadow-md shadow-purple-900/15 transition-all">
-        <div class="flex items-center justify-center gap-1">
-          <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px]">person_add</mat-icon>
-          <span>إضافة طالب</span>
-        </div>
-      </button>
+<section class="student-workspace" dir="rtl" aria-labelledby="students-heading">
+  <header class="student-heading">
+    <div><p class="student-kicker">إدارة الحسابات</p><h1 id="students-heading">{{ showArchived() ? 'أرشيف الطلاب' : 'الطلاب' }}</h1><p>إدارة بيانات الطلاب والاشتراكات والحصص من مكان واحد.</p></div>
+    <div class="student-actions">
+      <button mat-stroked-button (click)="toggleArchive()" [disabled]="loading() || saving()"><mat-icon>{{ showArchived() ? 'people_outline' : 'inventory_2' }}</mat-icon>{{ showArchived() ? 'الطلاب الحاليون' : 'الأرشيف' }}</button>
+      <button mat-flat-button class="student-primary" (click)="openModal()" [disabled]="showArchived() || saving()"><mat-icon>add</mat-icon>إضافة طالب</button>
     </div>
   </header>
 
   @if (errorMessage()) {
-    <div role="alert" class="student-alert">{{ errorMessage() }} <button type="button" (click)="getStudents()">إعادة المحاولة</button></div>
+    <div role="alert" class="student-alert"><div><strong>تعذر إتمام الطلب</strong><p>{{ errorMessage() }}</p>@if (dataSource.data.length) { <small>المعروض هو آخر بيانات تم تحميلها بنجاح.</small> }</div><button mat-button (click)="getStudents()" [disabled]="loading()">إعادة المحاولة</button></div>
   }
-  @if (loading()) { <p role="status" class="text-sm text-indigo-600 mb-4">جاري تحميل الطلاب...</p> }
-  <!-- ================= شريط البحث السريع ================= -->
-  <div class="bg-white p-2 sm:p-2.5 rounded-2xl border border-slate-200/70 shadow-xs mb-4 flex items-center gap-2">
-    <div class="relative flex-1">
-      <span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-        <mat-icon class="!w-4 !h-4 sm:!w-5 sm:!h-5 !text-[18px] sm:!text-[20px]">search</mat-icon>
-      </span>
-      <input
-        type="text"
-        [(ngModel)]="searchQuery"
-        (input)="applyFilter()"
-        placeholder="ابحث بالاسم، اسم المستخدم، أو رقم الهاتف..."
-        class="w-full pr-9 sm:pr-10 pl-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-xl border-0 bg-transparent text-slate-800 placeholder:text-slate-400 focus:outline-none font-medium">
+  <div class="student-panel" [attr.aria-busy]="loading()">
+    <div class="student-toolbar">
+      <label class="student-search"><mat-icon>search</mat-icon><input type="search" [(ngModel)]="searchQuery" (input)="applyFilter()" placeholder="ابحث باسم الطالب أو الهاتف…" aria-label="البحث عن طالب بالاسم أو اسم المستخدم أو الهاتف" /></label>
+      <select class="student-status-filter" [(ngModel)]="statusFilter" (ngModelChange)="applyFilter()" aria-label="تصفية حسب حالة الطالب"><option value="">كل الحالات</option>@for (status of statusOptions; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }</select>
+      <button mat-icon-button aria-label="تحديث قائمة الطلاب" matTooltip="تحديث القائمة" (click)="getStudents()" [disabled]="loading() || saving()"><mat-icon>refresh</mat-icon></button>
+      <button mat-stroked-button (click)="exportToExcel()" [disabled]="loading() || !dataSource.filteredData.length"><mat-icon>download</mat-icon>تصدير CSV</button>
     </div>
-
-    @if (searchQuery) {
-      <button
-        mat-button
-        (click)="searchQuery = ''; applyFilter()"
-        class="!min-w-0 !px-2 sm:!px-3 !py-1 !rounded-lg !text-xs !text-slate-500 hover:!bg-slate-100">
-        مسح
-      </button>
-    }
-  </div>
-
-  <!-- تلميح توضيحي خفيف يظهر في الموبايل فقط لمساعدة المستخدم على السحب الأفقي -->
-  <div class="flex sm:hidden items-center justify-between text-[10px] text-slate-400 px-1 mb-1.5 font-medium">
-    <span class="flex items-center gap-1">
-      <mat-icon class="!w-3.5 !h-3.5 !text-[14px] text-slate-400">swipe</mat-icon>
-      اسحب الجدول أفقياً للاطلاع على باقي البيانات
-    </span>
-  </div>
-
-  <!-- ================= الجدول الموحد (Desktop & Mobile) ================= -->
-  <div class="bg-white rounded-2xl border border-slate-200/70 shadow-xs overflow-hidden">
-
-    <!-- حاوية التمرير الأفقي السلس للموبايل -->
-    <div class="overflow-x-auto w-full table-container">
-      <table mat-table [dataSource]="dataSource" class="w-full !bg-white whitespace-nowrap min-w-[580px]">
-
-        <!-- عمود الطالب -->
-        <ng-container matColumnDef="fullName">
-          <th mat-header-cell *matHeaderCellDef class="!text-right !font-bold !text-slate-500 !bg-slate-50/60 !px-4 sm:!px-6 !py-3.5 !border-b !border-slate-100 text-[11px] sm:text-xs"> الطالب </th>
-          <td mat-cell *matCellDef="let student" class="!px-4 sm:!px-6 !py-3 !border-b !border-slate-50">
-            <div class="flex items-center gap-2.5 sm:gap-3">
-              <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-purple-50 text-[#311060] font-bold text-xs sm:text-sm flex items-center justify-center border border-purple-100/80 shrink-0">
-                {{ student.fullName ? student.fullName.charAt(0) : 'ط' }}
-              </div>
-              <div>
-                <p class="font-bold text-slate-900 text-xs sm:text-sm leading-tight">{{ student.fullName }}</p>
-                <p class="text-[10px] sm:text-xs text-slate-400 font-normal">@{{ student.userName }}</p>
-              </div>
-            </div>
-          </td>
-        </ng-container>
-
-        <!-- عمود رقم الهاتف -->
-        <ng-container matColumnDef="phoneNumber">
-          <th mat-header-cell *matHeaderCellDef class="!text-right !font-bold !text-slate-500 !bg-slate-50/60 !px-4 sm:!px-6 !py-3.5 !border-b !border-slate-100 text-[11px] sm:text-xs"> رقم الهاتف </th>
-          <td mat-cell *matCellDef="let student" class="!px-4 sm:!px-6 !py-3 !border-b !border-slate-50">
-            <span class="text-slate-700 font-medium text-xs sm:text-sm" dir="ltr">{{ student.phoneNumber }}</span>
-          </td>
-        </ng-container>
-
-        <!-- عمود تاريخ الانتهاء -->
-        <ng-container matColumnDef="expirationDate">
-          <th mat-header-cell *matHeaderCellDef class="!text-right !font-bold !text-slate-500 !bg-slate-50/60 !px-4 sm:!px-6 !py-3.5 !border-b !border-slate-100 text-[11px] sm:text-xs"> تاريخ الانتهاء </th>
-          <td mat-cell *matCellDef="let student" class="!px-4 sm:!px-6 !py-3 !border-b !border-slate-50 text-slate-600 text-xs sm:text-sm font-medium">
-            {{ student.expirationDate ? (student.expirationDate | date:'yyyy-MM-dd') : 'غير محدد' }}
-          </td>
-        </ng-container>
-
-        <!-- عمود الحالة -->
-        <ng-container matColumnDef="status">
-          <th mat-header-cell *matHeaderCellDef class="!text-right !font-bold !text-slate-500 !bg-slate-50/60 !px-4 sm:!px-6 !py-3.5 !border-b !border-slate-100 text-[11px] sm:text-xs"> الحالة </th>
-          <td mat-cell *matCellDef="let student" class="!px-4 sm:!px-6 !py-3 !border-b !border-slate-50">
-            @if (student.status === 'Active') {
-              <span class="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> نشط
-              </span>
-            } @else {
-              <span class="inline-flex items-center gap-1 sm:gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/50">
-                <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> غير نشط
-              </span>
-            }
-          </td>
-        </ng-container>
-
-        <!-- عمود العمليات -->
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef class="!text-center !font-bold !text-slate-500 !bg-slate-50/60 !px-3 sm:!px-6 !py-3.5 !border-b !border-slate-100 text-[11px] sm:text-xs"> إجراءات </th>
-          <td mat-cell *matCellDef="let student" class="!px-3 sm:!px-6 !py-3 !border-b !border-slate-50 text-center">
-            <div class="flex items-center justify-center gap-1">
-              <button
-                mat-icon-button
-                matTooltip="عرض التفاصيل" aria-label="عرض تفاصيل الطالب"
-                (click)="openDetailsModal(student)"
-                class="!w-7 !h-7 sm:!w-8 sm:!h-8 !rounded-lg !bg-slate-50 hover:!bg-purple-50 text-slate-500 hover:text-[#311060] transition-colors flex items-center justify-center">
-                <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px]">visibility</mat-icon>
-              </button>
-              <button
-                mat-icon-button
-                matTooltip="تعديل" aria-label="تعديل الطالب" (click)="openEdit(student)" [disabled]="saving() || showArchived()"
-                class="!w-7 !h-7 sm:!w-8 sm:!h-8 !rounded-lg !bg-slate-50 hover:!bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center">
-                <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px]">edit</mat-icon>
-              </button>
-              <button
-                mat-icon-button
-                matTooltip="حذف" aria-label="أرشفة الطالب"
-                (click)="deleteStudent(student.id)" [disabled]="saving() || showArchived()"
-                class="!w-7 !h-7 sm:!w-8 sm:!h-8 !rounded-lg !bg-slate-50 hover:!bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors flex items-center justify-center">
-                <mat-icon class="!w-4 !h-4 !text-[16px] sm:!text-[18px]">delete_outline</mat-icon>
-              </button>
-              @if (showArchived()) {
-                <button mat-icon-button matTooltip="استعادة الطالب" aria-label="استعادة الطالب" (click)="restoreStudent(student)" [disabled]="saving()"><mat-icon>restore</mat-icon></button>
-              } @else {
-                <button mat-icon-button matTooltip="إضافة حصص تعويضية" aria-label="إضافة حصص تعويضية" (click)="openCreditModal(student)" [disabled]="saving()"><mat-icon>add_circle_outline</mat-icon></button>
-                <button mat-icon-button matTooltip="التحويل لنظام الحصص" aria-label="التحويل لنظام الحصص" (click)="setSessionMode(student)" [disabled]="saving()"><mat-icon>autorenew</mat-icon></button>
-              }
-            </div>
-          </td>
-        </ng-container>
-
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="hover:bg-slate-50/70 transition-colors"></tr>
+    <div class="student-list-meta"><span><strong>{{ dataSource.filteredData.length }}</strong> {{ searchQuery || statusFilter ? 'نتيجة من ' + dataSource.data.length + ' سجل محمّل' : 'سجل محمّل' }}</span>@if (searchQuery || statusFilter) { <button mat-button (click)="clearFilters()">مسح الفلاتر</button> }<span class="student-scroll-hint">اسحب الجدول لعرض باقي الأعمدة</span></div>
+    @if (loading() || detailsLoading()) { <p role="status" class="student-loading">{{ loading() ? 'جاري تحديث قائمة الطلاب…' : 'جاري تحميل ملف الطالب…' }}</p> }
+    <div class="student-table-scroll" role="region" aria-label="جدول الطلاب، قابل للتمرير أفقيًا" tabindex="0">
+      <table mat-table [dataSource]="dataSource" matSort matSortActive="fullName" matSortDirection="asc">
+        <ng-container matColumnDef="fullName"><th mat-header-cell *matHeaderCellDef mat-sort-header="fullName" sortActionDescription="ترتيب حسب اسم الطالب">الطالب</th><td mat-cell *matCellDef="let student"><div class="student-identity"><span class="student-avatar">{{ student.fullName?.charAt(0) || 'ط' }}</span><div><button class="student-name" (click)="openDetailsModal(student)" [disabled]="detailsLoading()">{{ student.fullName || 'بدون اسم' }}</button><small dir="ltr">@{{ student.userName || '—' }}</small></div></div></td></ng-container>
+        <ng-container matColumnDef="phoneNumber"><th mat-header-cell *matHeaderCellDef>رقم الهاتف</th><td mat-cell *matCellDef="let student"><span dir="ltr">{{ student.phoneNumber || '—' }}</span></td></ng-container>
+        <ng-container matColumnDef="expirationDate"><th mat-header-cell *matHeaderCellDef mat-sort-header="expirationDate" sortActionDescription="ترتيب حسب انتهاء الاشتراك">انتهاء الاشتراك</th><td mat-cell *matCellDef="let student">{{ student.expirationDate ? (student.expirationDate | date:'dd/MM/yyyy') : 'غير محدد' }}</td></ng-container>
+        <ng-container matColumnDef="status"><th mat-header-cell *matHeaderCellDef mat-sort-header="status" sortActionDescription="ترتيب حسب حالة الطالب">الحالة</th><td mat-cell *matCellDef="let student"><span class="student-status" [class.active]="student.status === 'Active'">{{ statusLabel(student.status) }}</span></td></ng-container>
+        <ng-container matColumnDef="actions"><th mat-header-cell *matHeaderCellDef>الإجراءات</th><td mat-cell *matCellDef="let student"><div class="student-row-actions">
+          @if (showArchived()) { <button mat-button (click)="restoreStudent(student)" [disabled]="saving()"><mat-icon>restore</mat-icon>استعادة</button> } @else { <button mat-button (click)="openEdit(student)" [disabled]="saving()"><mat-icon>edit</mat-icon>تعديل</button> }
+          <button mat-icon-button [matMenuTriggerFor]="rowMenu" [attr.aria-label]="'المزيد من الإجراءات للطالب ' + student.fullName" [disabled]="saving()"><mat-icon>more_horiz</mat-icon></button>
+          <mat-menu #rowMenu="matMenu" xPosition="before"><button mat-menu-item (click)="openDetailsModal(student)" [disabled]="detailsLoading()"><mat-icon>visibility</mat-icon>عرض ملف الطالب</button>@if (!showArchived()) { <button mat-menu-item (click)="openCreditModal(student)"><mat-icon>add_circle_outline</mat-icon>إضافة حصص تعويضية</button><button mat-menu-item (click)="setSessionMode(student)"><mat-icon>autorenew</mat-icon>التحويل إلى نظام الحصص</button><hr /><button mat-menu-item (click)="deleteStudent(student.id)"><mat-icon>archive</mat-icon>أرشفة الطالب</button> }</mat-menu>
+        </div></td></ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr><tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
       </table>
     </div>
-
-    <!-- حالة عدم وجود بيانات -->
-    @if (!loading() && !errorMessage() && dataSource.filteredData.length === 0) {
-      <div class="p-8 sm:p-12 text-center bg-white">
-        <mat-icon class="!w-10 !h-10 sm:!w-12 sm:!h-12 !text-[40px] sm:!text-[48px] text-slate-300 mx-auto mb-2">person_search</mat-icon>
-        <h3 class="text-xs sm:text-sm font-bold text-slate-700">لا يوجد طلاب مطابقون للبحث</h3>
-        <p class="text-[11px] text-slate-400 mt-0.5">تأكد من كتابة الاسم أو رقم الهاتف بشكل صحيح.</p>
-      </div>
+    @if (!loading() && !errorMessage() && !dataSource.filteredData.length) {
+      <div class="student-empty"><mat-icon>{{ searchQuery || statusFilter ? 'search_off' : 'people_outline' }}</mat-icon><h2>{{ searchQuery || statusFilter ? 'لا توجد نتائج مطابقة' : showArchived() ? 'الأرشيف فارغ' : 'لا توجد سجلات طلاب محمّلة' }}</h2><p>{{ searchQuery || statusFilter ? 'جرّب اسمًا آخر أو غيّر الحالة المحددة.' : showArchived() ? 'ستظهر هنا حسابات الطلاب بعد أرشفتها.' : 'أضف طالبًا جديدًا لبدء إدارة حسابه واشتراكه.' }}</p>@if (searchQuery || statusFilter) { <button mat-stroked-button (click)="clearFilters()">مسح الفلاتر</button> } @else if (!showArchived()) { <button mat-stroked-button (click)="openModal()">إضافة طالب</button> }</div>
     }
-
+    <mat-paginator [pageSize]="10" [pageSizeOptions]="[10, 25, 50]" showFirstLastButtons aria-label="صفحات سجلات الطلاب المحمّلة" />
   </div>
 
-  <!-- ================= مودال تفاصيل الطالب ================= -->
-  @if (isDetailsModalOpen && selectedStudent) {
-    <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-950/40 backdrop-blur-xs p-0 sm:p-4"
-         (click)="closeDetailsModal()">
-
-      <div class="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl max-w-lg w-full p-4 sm:p-7 border border-slate-100 max-h-[90vh] overflow-y-auto"
-           (click)="$event.stopPropagation()">
-
-        <!-- رأس المودال -->
-        <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
-          <div class="flex items-center gap-2.5 sm:gap-3">
-            <div class="w-10 h-10 rounded-xl bg-purple-50 text-[#311060] flex items-center justify-center font-bold text-sm border border-purple-100">
-              {{ selectedStudent.fullName ? selectedStudent.fullName.charAt(0) : 'ط' }}
-            </div>
-            <div>
-              <h3 class="text-sm sm:text-base font-bold text-slate-900 leading-tight">{{ selectedStudent.fullName }}</h3>
-              <p class="text-[11px] text-slate-400">@{{ selectedStudent.userName }}</p>
-            </div>
-          </div>
-          <button mat-icon-button (click)="closeDetailsModal()" class="text-slate-400 hover:text-slate-700">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
-
-        <!-- محتوى التفاصيل -->
-        <div class="space-y-3.5 text-xs">
-
-          <!-- بيانات ولي الأمر -->
-          <div class="bg-slate-50 p-3 rounded-xl sm:rounded-2xl border border-slate-100">
-            <h4 class="font-bold text-[#311060] mb-2 flex items-center gap-1.5 text-xs">
-              <mat-icon class="!w-4 !h-4 !text-[16px]">contact_phone</mat-icon>
-              <span>بيانات الاتصال وولي الأمر</span>
-            </h4>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600">
-              <div>
-                <span class="text-slate-400 block text-[10px]">ولي الأمر:</span>
-                <span class="font-bold text-slate-800">{{ selectedStudent.parentName || 'غير مسجل' }}</span>
-              </div>
-              <div>
-                <span class="text-slate-400 block text-[10px]">هاتف ولي الأمر:</span>
-                <span class="font-bold text-slate-800" dir="ltr">{{ selectedStudent.parentPhoneNumber || 'غير مسجل' }}</span>
-              </div>
-              <div>
-                <span class="text-slate-400 block text-[10px]">هاتف الطالب:</span>
-                <span class="font-bold text-slate-800" dir="ltr">{{ selectedStudent.phoneNumber }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- إحصائيات الحصص -->
-          <div class="bg-slate-50 p-3 rounded-xl sm:rounded-2xl border border-slate-100">
-            <h4 class="font-bold text-[#311060] mb-2 flex items-center gap-1.5 text-xs">
-              <mat-icon class="!w-4 !h-4 !text-[16px]">pie_chart</mat-icon>
-              <span>رصيد الحصص</span>
-            </h4>
-            <div class="grid grid-cols-3 gap-2 text-center">
-              <div class="bg-white p-2 rounded-xl border border-slate-200/60">
-                <span class="text-slate-400 block text-[10px] mb-0.5">الإجمالي</span>
-                <span class="font-black text-slate-900 text-sm">{{ selectedStudent.sessions?.totalSessions ?? 0 }}</span>
-              </div>
-              <div class="bg-white p-2 rounded-xl border border-slate-200/60">
-                <span class="text-slate-400 block text-[10px] mb-0.5">المستهلك</span>
-                <span class="font-black text-amber-600 text-sm">{{ selectedStudent.sessions?.usedSessions ?? 0 }}</span>
-              </div>
-              <div class="bg-white p-2 rounded-xl border border-slate-200/60">
-                <span class="text-slate-400 block text-[10px] mb-0.5">المتبقي</span>
-                <span class="font-black text-emerald-600 text-sm">{{ selectedStudent.sessions?.remainingSessions ?? 0 }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- المعلمون والمواد -->
-          <div class="bg-slate-50 p-3 rounded-xl sm:rounded-2xl border border-slate-100">
-            <h4 class="font-bold text-[#311060] mb-2 flex items-center gap-1.5 text-xs">
-              <mat-icon class="!w-4 !h-4 !text-[16px]">school</mat-icon>
-              <span>المعلمون والاشتراكات</span>
-            </h4>
-            <div class="space-y-1.5">
-              @for (teacher of selectedStudent.teacherAssignments; track teacher.teacherId) {
-                <div class="flex items-center justify-between bg-white p-2 rounded-xl border border-slate-200/60 text-xs">
-                  <span class="font-bold text-slate-800">{{ teacher.teacherName }}</span>
-                  <span class="px-2 py-0.5 rounded-md bg-purple-50 text-[#311060] font-bold text-[11px]">
-                    {{ teacher.sessionPrice }} {{ teacher.currency }}
-                  </span>
-                </div>
-              } @empty {
-                <p class="text-xs text-slate-400 text-center py-2">لا توجد مواد مسندة حالياً</p>
-              }
-            </div>
-          </div>
-
-        </div>
-
-        <!-- زر الإغلاق -->
-        <div class="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-          <button
-            mat-flat-button
-            (click)="closeDetailsModal()"
-            class="!bg-[#311060] !text-white !rounded-xl !px-6 !py-1.5 !text-xs !font-bold">
-            إغلاق
-          </button>
-        </div>
-
-      </div>
-    </div>
+  @if (isDetailsModalOpen && selectedStudent; as student) {
+    <div class="student-modal-backdrop" (click)="closeDetailsModal()"><section class="student-modal student-detail" role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" aria-labelledby="student-details-title" (click)="$event.stopPropagation()" (keydown.escape)="closeDetailsModal()">
+      <header class="student-modal-header"><div><p class="student-kicker">ملف الطالب</p><h2 id="student-details-title">{{ student.fullName }}</h2><small dir="ltr">@{{ student.userName }}</small></div><button mat-icon-button aria-label="إغلاق ملف الطالب" (click)="closeDetailsModal()"><mat-icon>close</mat-icon></button></header>
+      <h3>بيانات التواصل</h3><dl class="student-info"><div><dt>هاتف الطالب</dt><dd dir="ltr">{{ student.phoneNumber || 'غير مسجل' }}</dd></div><div><dt>ولي الأمر</dt><dd>{{ student.parentName || 'غير مسجل' }}</dd></div><div><dt>هاتف ولي الأمر</dt><dd dir="ltr">{{ student.parentPhoneNumber || 'غير مسجل' }}</dd></div><div><dt>الحالة</dt><dd>{{ statusLabel(student.status) }}</dd></div><div><dt>انتهاء الاشتراك</dt><dd>{{ student.expirationDate ? (student.expirationDate | date:'dd/MM/yyyy') : 'غير محدد' }}</dd></div></dl>
+      <h3>رصيد الحصص</h3><dl class="student-info student-credits"><div><dt>الإجمالي</dt><dd>{{ student.sessions?.totalSessions ?? '—' }}</dd></div><div><dt>المستهلك</dt><dd>{{ student.sessions?.usedSessions ?? '—' }}</dd></div><div><dt>المتبقي</dt><dd>{{ student.sessions?.remainingSessions ?? '—' }}</dd></div></dl>
+      <h3>المعلمون والاشتراكات</h3>@for (teacher of student.teacherAssignments; track $index) { <div class="student-teacher"><strong>{{ teacher.teacherName || 'معلم مسند' }}</strong><span>{{ teacher.sessionPrice }} {{ teacher.currency }} / حصة</span></div> } @empty { <p class="student-note">لا توجد إسنادات معلمين مسجلة.</p> }
+      <footer class="student-modal-actions"><button mat-stroked-button (click)="closeDetailsModal()">إغلاق</button>@if (!showArchived()) { <button mat-flat-button class="student-primary" (click)="closeDetailsModal(); openEdit(student)" [disabled]="saving()">تعديل بيانات الطالب</button> }</footer>
+    </section></div>
   }
-
 
   @if (isModalOpen) {
-    <div class="student-modal-backdrop" (click)="closeModal()">
-      <section class="student-modal" role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" aria-labelledby="student-editor-title" (click)="$event.stopPropagation()" (keydown.escape)="closeModal()">
-        <header class="student-modal-header"><div><p class="brand-eyebrow">بسطهالي / الطلاب</p><h2 id="student-editor-title">{{ editingId() ? 'تعديل بيانات الطالب' : 'إضافة طالب جديد' }}</h2></div><button type="button" aria-label="إغلاق نموذج الطالب" (click)="closeModal()" [disabled]="saving()"><mat-icon>close</mat-icon></button></header>
-        <form [formGroup]="studentForm" (ngSubmit)="saveStudent()">
-          @if (editorError()) { <p role="alert" class="student-alert">{{ editorError() }}</p> }
-          <fieldset [disabled]="saving()" class="student-fields">
-            <legend>بيانات الحساب</legend>
-            <label>الاسم الكامل *<input formControlName="fullName" autocomplete="name" required /></label>
-            <label>رقم الهاتف *<input formControlName="phoneNumber" type="tel" dir="ltr" required /></label>
-            @if (!editingId()) {
-              <label>اسم المستخدم *<input formControlName="userName" autocomplete="off" required /></label>
-              <label>كلمة المرور الأولية *<input formControlName="password" type="password" autocomplete="new-password" minlength="6" required /></label>
-            }
-            <label>اسم ولي الأمر<input formControlName="parentName" /></label>
-            <label>هاتف ولي الأمر<input formControlName="parentPhoneNumber" type="tel" dir="ltr" /></label>
-          </fieldset>
-          <fieldset [disabled]="saving()" class="student-fields">
-            <legend>البيانات الدراسية</legend>
-            <label>المنهج *
-              @if (curriculums().length) { <select formControlName="curriculumId" required><option value="">اختر المنهج</option>@for (item of curriculums(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select> }
-              @else { <input formControlName="curriculumId" placeholder="معرّف المنهج UUID" dir="ltr" required /> }
-            </label>
-            <label>الصف الدراسي *
-              @if (gradeLevels().length) { <select formControlName="gradeLevelId" required><option value="">اختر الصف</option>@for (item of gradeLevels(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select> }
-              @else { <input formControlName="gradeLevelId" placeholder="معرّف الصف UUID" dir="ltr" required /> }
-            </label>
-            <label>معرّف المرحلة التعليمية *<input formControlName="educationStageId" placeholder="UUID" dir="ltr" required /><small>يمكن نسخه من بيانات المرحلة في إدارة المناهج.</small></label>
-            <label>المواد<select formControlName="subjectIds" multiple size="3">@for (item of subjects(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select><small>إسنادات المعلمين تُضاف تلقائيًا إلى المواد المختارة.</small></label>
-            @if (editingId()) {
-              <label>الحالة *<input formControlName="status" required /></label>
-              <label>تاريخ انتهاء الاشتراك *<input formControlName="expirationDate" type="datetime-local" required /></label>
-            }
-          </fieldset>
-          @if (subjectsNeedReview()) {
-            <div class="student-alert"><p>راجع المواد المسجلة للطالب قبل الحفظ. القائمة المعروضة تضم المواد المسندة إلى معلمين؛ أضف أي مواد أخرى مسجل بها.</p><label class="flex items-center gap-2 mt-2"><input type="checkbox" formControlName="subjectsReviewed" /> راجعت المواد المختارة وهي القائمة الكاملة للطالب</label></div>
-          }
-          <div class="student-assignment-heading"><h3>إسناد المعلمين</h3><button type="button" class="brand-button secondary" (click)="addAssignment()" [disabled]="saving()">إضافة إسناد</button></div>
-          <div formArrayName="teacherAssignments">
-            @for (assignment of assignments.controls; track assignment; let index = $index) {
-              <fieldset class="student-fields student-assignment" [formGroupName]="index" [disabled]="saving()">
-                <legend>الإسناد {{ index + 1 }}</legend>
-                <label>المادة *<select formControlName="subjectId" required><option value="">اختر المادة</option>@for (item of subjects(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select></label>
-                <label>المعلم *<select formControlName="teacherId" required><option value="">اختر المعلم</option>@for (item of teachers(); track item.id) { <option [value]="item.id">{{ item.fullName || item.userName || item.id }}</option> }</select></label>
-                <label>سعر الحصة *<input formControlName="sessionPrice" type="number" min="0" step="0.01" required /></label>
-                <label>العملة *<input formControlName="currency" required /></label>
-                <button type="button" class="text-rose-600 text-sm" (click)="removeAssignment(index)" [disabled]="saving()">إزالة الإسناد</button>
-              </fieldset>
-            }
-          </div>
-          <footer class="student-modal-actions"><button class="brand-button secondary" type="button" (click)="closeModal()" [disabled]="saving()">إلغاء</button><button class="brand-button" type="submit" [disabled]="saving()">{{ saving() ? 'جاري الحفظ...' : 'حفظ الطالب' }}</button></footer>
-        </form>
-      </section>
-    </div>
+    <div class="student-modal-backdrop" (click)="closeModal()"><section class="student-modal" role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" aria-labelledby="student-editor-title" (click)="$event.stopPropagation()" (keydown.escape)="closeModal()">
+      <header class="student-modal-header"><div><p class="student-kicker">إدارة الطلاب</p><h2 id="student-editor-title">{{ editingId() ? 'تعديل بيانات الطالب' : 'إضافة طالب جديد' }}</h2><p class="student-note">الحقول المعلّمة بـ * مطلوبة.</p></div><button mat-icon-button aria-label="إغلاق نموذج الطالب" (click)="closeModal()" [disabled]="saving()"><mat-icon>close</mat-icon></button></header>
+      <form [formGroup]="studentForm" (ngSubmit)="saveStudent()">
+        @if (editorError()) { <div role="alert" class="student-alert">{{ editorError() }}</div> }
+        <fieldset [disabled]="saving()" class="student-fields"><legend>01 · بيانات الطالب والحساب</legend>
+          <label>الاسم الكامل *<input formControlName="fullName" autocomplete="name" required [attr.aria-invalid]="fieldError('fullName')" />@if (fieldError('fullName')) { <small class="student-invalid">أدخل الاسم الكامل.</small> }</label>
+          <label>رقم الهاتف *<input formControlName="phoneNumber" type="tel" dir="ltr" autocomplete="tel" required [attr.aria-invalid]="fieldError('phoneNumber')" />@if (fieldError('phoneNumber')) { <small class="student-invalid">أدخل رقم الهاتف.</small> }</label>
+          @if (!editingId()) { <label>اسم المستخدم *<input formControlName="userName" autocomplete="off" dir="ltr" required [attr.aria-invalid]="fieldError('userName')" />@if (fieldError('userName')) { <small class="student-invalid">أدخل اسم المستخدم.</small> }</label><label>كلمة المرور الأولية *<input formControlName="password" type="password" autocomplete="new-password" minlength="6" required [attr.aria-invalid]="fieldError('password')" /><small [class.student-invalid]="fieldError('password')">6 أحرف على الأقل.</small></label> }
+          <label>اسم ولي الأمر<input formControlName="parentName" /><small>اختياري</small></label><label>هاتف ولي الأمر<input formControlName="parentPhoneNumber" type="tel" dir="ltr" /><small>اختياري</small></label>
+        </fieldset>
+        <fieldset [disabled]="saving()" class="student-fields"><legend>02 · الدراسة والاشتراك</legend>
+          <label>المنهج * @if (curriculums().length) { <select formControlName="curriculumId" required [attr.aria-invalid]="fieldError('curriculumId')"><option value="">اختر المنهج</option>@for (item of curriculums(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select> } @else { <input formControlName="curriculumId" placeholder="معرّف المنهج UUID" dir="ltr" required /> }@if (fieldError('curriculumId')) { <small class="student-invalid">اختر المنهج أو أدخل معرّفًا صحيحًا.</small> }</label>
+          <label>الصف الدراسي * @if (gradeLevels().length) { <select formControlName="gradeLevelId" required [attr.aria-invalid]="fieldError('gradeLevelId')"><option value="">اختر الصف</option>@for (item of gradeLevels(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select> } @else { <input formControlName="gradeLevelId" placeholder="معرّف الصف UUID" dir="ltr" required /> }@if (fieldError('gradeLevelId')) { <small class="student-invalid">اختر الصف أو أدخل معرّفًا صحيحًا.</small> }</label>
+          <label>معرّف المرحلة التعليمية *<input formControlName="educationStageId" placeholder="UUID" dir="ltr" required [attr.aria-invalid]="fieldError('educationStageId')" /><small [class.student-invalid]="fieldError('educationStageId')">{{ fieldError('educationStageId') ? 'أدخل معرّف مرحلة صحيحًا.' : 'انسخه من بيانات المرحلة في إدارة المناهج.' }}</small></label>
+          <label>المواد<select formControlName="subjectIds" multiple size="3">@for (item of subjects(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select><small>يمكن اختيار أكثر من مادة. تُضاف مواد إسنادات المعلمين تلقائيًا.</small></label>
+          @if (editingId()) { <label>الحالة *<input formControlName="status" list="student-status-values" required /><datalist id="student-status-values">@for (status of statusOptions; track status) { <option [value]="status">{{ statusLabel(status) }}</option> }</datalist><small>استخدم قيمة الحالة المعتمدة في النظام.</small></label><label>تاريخ انتهاء الاشتراك *<input formControlName="expirationDate" type="datetime-local" required [attr.aria-invalid]="fieldError('expirationDate')" />@if (fieldError('expirationDate')) { <small class="student-invalid">حدد تاريخ انتهاء الاشتراك.</small> }</label> }
+        </fieldset>
+        @if (subjectsNeedReview()) { <div class="student-alert"><div><p>الخادم لم يُرجع قائمة المواد كاملة. راجع المواد المختارة وأضف أي مواد مسجل بها الطالب قبل الحفظ.</p><label class="student-review"><input type="checkbox" formControlName="subjectsReviewed" /> راجعت المواد المختارة وهي القائمة الكاملة للطالب</label></div></div> }
+        <div class="student-assignment-heading"><div><h3>03 · إسناد المعلمين</h3><p class="student-note">حدّد المعلم وسعر الحصة لكل مادة.</p></div><button mat-stroked-button type="button" (click)="addAssignment()" [disabled]="saving()"><mat-icon>add</mat-icon>إضافة إسناد</button></div>
+        <div formArrayName="teacherAssignments">@for (assignment of assignments.controls; track assignment; let index = $index) { <fieldset class="student-fields student-assignment" [formGroupName]="index" [disabled]="saving()"><legend>الإسناد {{ index + 1 }}</legend><label>المادة *<select formControlName="subjectId" required><option value="">اختر المادة</option>@for (item of subjects(); track item.id) { <option [value]="item.id">{{ item.nameAr || item.nameEn || item.id }}</option> }</select></label><label>المعلم *<select formControlName="teacherId" required><option value="">اختر المعلم</option>@for (item of teachers(); track item.id) { <option [value]="item.id">{{ item.fullName || item.userName || item.id }}</option> }</select></label><label>سعر الحصة *<input formControlName="sessionPrice" type="number" min="0" step="0.01" required /></label><label>العملة *<input formControlName="currency" required /></label><button mat-button type="button" (click)="removeAssignment(index)" [disabled]="saving()"><mat-icon>remove_circle_outline</mat-icon>إزالة الإسناد</button></fieldset> } @empty { <p class="student-note">لم تُضف إسنادات بعد. يمكنك إضافتها الآن أو لاحقًا.</p> }</div>
+        <footer class="student-modal-actions"><button mat-stroked-button type="button" (click)="closeModal()" [disabled]="saving()">إلغاء</button><button mat-flat-button class="student-primary" type="submit" [disabled]="saving()">{{ saving() ? 'جاري الحفظ…' : editingId() ? 'حفظ التعديلات' : 'إضافة الطالب' }}</button></footer>
+      </form>
+    </section></div>
   }
   @if (creditTarget(); as student) {
-    <div class="student-modal-backdrop" (click)="closeCreditModal()">
-      <section class="student-modal student-credit-modal" role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" aria-labelledby="student-credits-title" (click)="$event.stopPropagation()" (keydown.escape)="closeCreditModal()">
-        <header class="student-modal-header"><h2 id="student-credits-title">إضافة حصص تعويضية — {{ student.fullName }}</h2><button type="button" (click)="closeCreditModal()" aria-label="إغلاق" [disabled]="saving()"><mat-icon>close</mat-icon></button></header>
-        <form [formGroup]="creditForm" (ngSubmit)="saveCredits()">
-          @if (editorError()) { <p role="alert" class="student-alert">{{ editorError() }}</p> }
-          <fieldset class="student-fields" [disabled]="saving()"><label>عدد الحصص *<input type="number" formControlName="quantity" min="1" step="1" required /></label><label>سبب الإضافة *<input formControlName="description" required /></label></fieldset>
-          <footer class="student-modal-actions"><button type="button" class="brand-button secondary" (click)="closeCreditModal()" [disabled]="saving()">إلغاء</button><button type="submit" class="brand-button" [disabled]="creditForm.invalid || saving()">{{ saving() ? 'جاري الحفظ...' : 'إضافة الحصص' }}</button></footer>
-        </form>
-      </section>
-    </div>
+    <div class="student-modal-backdrop" (click)="closeCreditModal()"><section class="student-modal student-detail" role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" aria-labelledby="student-credits-title" (click)="$event.stopPropagation()" (keydown.escape)="closeCreditModal()"><header class="student-modal-header"><div><p class="student-kicker">{{ student.fullName }}</p><h2 id="student-credits-title">إضافة حصص تعويضية</h2></div><button mat-icon-button type="button" (click)="closeCreditModal()" aria-label="إغلاق" [disabled]="saving()"><mat-icon>close</mat-icon></button></header><form [formGroup]="creditForm" (ngSubmit)="saveCredits()">@if (editorError()) { <div role="alert" class="student-alert">{{ editorError() }}</div> }<fieldset class="student-fields" [disabled]="saving()"><label>عدد الحصص *<input type="number" formControlName="quantity" min="1" step="1" required /><small>عدد صحيح أكبر من صفر.</small></label><label>سبب الإضافة *<input formControlName="description" required placeholder="مثال: تعويض حصة ملغاة" /></label></fieldset><footer class="student-modal-actions"><button mat-stroked-button type="button" (click)="closeCreditModal()" [disabled]="saving()">إلغاء</button><button mat-flat-button class="student-primary" type="submit" [disabled]="creditForm.invalid || saving()">{{ saving() ? 'جاري الحفظ…' : 'إضافة الحصص' }}</button></footer></form></section></div>
   }
-</div>
+</section>

@@ -109,4 +109,48 @@ describe('Student admin workflow', () => {
     component.saveStudent(); expect(user.updateStudent).not.toHaveBeenCalled();
   });
 
+  it('filters by actual returned statuses without relabeling unknown values as inactive', async () => {
+    component.dataSource.data = [student, { ...student, id: 'other', fullName: 'طالب مؤجل', status: 'PendingReview' }] as any;
+    component.statusFilter = 'PendingReview'; component.applyFilter();
+    fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
+    expect(component.statusOptions).toEqual(['Active', 'PendingReview']);
+    expect(component.dataSource.filteredData.map(item => item.id)).toEqual(['other']);
+    expect(fixture.nativeElement.querySelector('.student-status').textContent).toContain('PendingReview');
+    expect(fixture.nativeElement.textContent).toContain('سجل محمّل');
+  });
+
+  it('paginates loaded records and resets the page when filters change', async () => {
+    component.dataSource.data = Array.from({ length: 23 }, (_, index) => ({ ...student, id: String(index), fullName: `طالب ${String(index + 1).padStart(2, '0')}`, phoneNumber: index === 22 ? '012345' : '0100' })) as any;
+    fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(10);
+    component.dataSource.paginator!.nextPage(); fixture.detectChanges();
+    expect(component.dataSource.paginator!.pageIndex).toBe(1);
+    component.searchQuery = '012345'; component.applyFilter();
+    fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
+    expect(component.dataSource.paginator!.pageIndex).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(1);
+    expect(component.dataSource.filteredData[0].id).toBe('22');
+    component.clearFilters();
+    fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
+    expect(component.dataSource.filteredData).toHaveLength(23);
+    expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(10);
+  });
+
+  it('distinguishes an empty loaded list from unmatched filters and clears filters for the archive', () => {
+    component.searchQuery = 'missing'; component.applyFilter(); fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('لا توجد نتائج مطابقة');
+    component.statusFilter = 'Active'; component.toggleArchive(); fixture.detectChanges();
+    expect(component.searchQuery).toBe(''); expect(component.statusFilter).toBe('');
+    expect(user.getArchivedStudents).toHaveBeenCalledOnce();
+    expect(fixture.nativeElement.textContent).toContain('الأرشيف فارغ');
+    expect(fixture.nativeElement.textContent).not.toContain('لا توجد نتائج مطابقة');
+  });
+
+  it('shows local required-field feedback without submitting an incomplete student', () => {
+    component.openModal(); component.saveStudent(); fixture.detectChanges();
+    expect(user.addStudents).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.querySelector('[formControlName="fullName"]').getAttribute('aria-invalid')).toBe('true');
+    expect(fixture.nativeElement.textContent).toContain('أدخل الاسم الكامل.');
+  });
+
 });

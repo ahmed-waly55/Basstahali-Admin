@@ -3,12 +3,14 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, finalize, throwError } from 'rxjs';
 import Swal from 'sweetalert2';
+import { RequestActivity } from '../services/request-activity';
 
 // متغير خارجي لمنع تكرار فتح التنبيه إذا فشل أكثر من طلب في نفس اللحظة بـ 401
 let isSessionExpiredAlertOpen = false;
 
 export const authLoadingInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
+  const activity = inject(RequestActivity);
 
   // 1. استثناء مسارات معينة (مثل تسجيل الدخول)
   const isAuthRequest = req.url.includes('/auth/login');
@@ -27,22 +29,13 @@ export const authLoadingInterceptor: HttpInterceptorFn = (req, next) => {
     });
   }
 
-  // 3. إظهار الـ Loading
-  Swal.fire({
-    title: 'جاري المعالجة...',
-    text: 'يرجى الانتظار قليلاً',
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    showConfirmButton: false,
-    didOpen: () => {
-      Swal.showLoading();
-    }
-  });
+  // Keep requests visible without interrupting the administrator's current task.
+  activity.begin();
 
   return next(clonedReq).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401 && !isAuthRequest) {
-        localStorage.clear();
+        for (const key of ['token','accessToken','refreshToken','user']) localStorage.removeItem(key);
 
         if (!isSessionExpiredAlertOpen) {
           isSessionExpiredAlertOpen = true;
@@ -52,7 +45,7 @@ export const authLoadingInterceptor: HttpInterceptorFn = (req, next) => {
             title: 'انتهت الجلسة!',
             text: 'انتهت صلاحية الجلسة تسجيل الدخول، يرجى تسجيل الدخول مجدداً.',
             confirmButtonText: 'تسجيل الدخول',
-            confirmButtonColor: '#4f46e5',
+            confirmButtonColor: '#6241a5',
             allowOutsideClick: false,
             allowEscapeKey: false
           }).then(() => {
@@ -65,10 +58,6 @@ export const authLoadingInterceptor: HttpInterceptorFn = (req, next) => {
       return throwError(() => error);
     }),
 
-    finalize(() => {
-      if (Swal.isVisible() && Swal.isLoading()) {
-        Swal.close();
-      }
-    })
+    finalize(() => activity.end())
   );
 };

@@ -1,6 +1,15 @@
-<div class="max-w-md mx-auto mt-12 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
-  <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">تغيير كلمة المرور</h2>
-
+<section class="account-settings" dir="rtl">
+  <header><h1>إعدادات الحساب</h1><p>خصّص مظهر مساحة العمل وحدّث كلمة المرور.</p></header>
+  <div class="settings-grid">
+    <section class="settings-panel appearance-panel" aria-labelledby="appearance-title">
+      <h2 id="appearance-title">مظهر الواجهة</h2><p>اختيارك محفوظ على هذا الجهاز، ويتطبّق على كل صفحات الإدارة.</p>
+      <div class="appearance-options" role="group" aria-label="اختيار مظهر الواجهة">
+        <button type="button" [class.selected]="theme.preference() === 'light'" [attr.aria-pressed]="theme.preference() === 'light'" (click)="theme.setPreference('light')"><mat-icon>light_mode</mat-icon><strong>فاتح</strong><span>خلفية فاتحة للعمل اليومي</span></button>
+        <button type="button" [class.selected]="theme.preference() === 'dark'" [attr.aria-pressed]="theme.preference() === 'dark'" (click)="theme.setPreference('dark')"><mat-icon>dark_mode</mat-icon><strong>داكن</strong><span>ألوان هادئة للإضاءة المنخفضة</span></button>
+        <button type="button" [class.selected]="theme.preference() === 'system'" [attr.aria-pressed]="theme.preference() === 'system'" (click)="theme.setPreference('system')"><mat-icon>contrast</mat-icon><strong>حسب الجهاز</strong><span>يتبع إعداد المظهر في نظامك</span></button>
+      </div>
+    </section>
+    <section class="settings-panel" aria-labelledby="password-title"><h2 id="password-title">تغيير كلمة المرور</h2><p>ستحتاج لتسجيل الدخول مجددًا بعد حفظ كلمة المرور الجديدة.</p>
   <form [formGroup]="changePasswordForm" (ngSubmit)="onSubmit()" class="flex flex-col gap-4">
 
     <!-- كلمة المرور الحالية -->
@@ -12,7 +21,7 @@
         formControlName="currentPassword"
         placeholder="أدخل كلمة المرور الحالية"
       >
-      <button mat-icon-button matSuffix (click)="hideCurrent = !hideCurrent" [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hideCurrent" type="button">
+      <button mat-icon-button matSuffix (click)="hideCurrent = !hideCurrent" [attr.aria-label]="hideCurrent ? 'إظهار كلمة المرور الحالية' : 'إخفاء كلمة المرور الحالية'" [attr.aria-pressed]="!hideCurrent" type="button">
         <mat-icon>{{hideCurrent ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>
 
@@ -30,7 +39,7 @@
         formControlName="newPassword"
         placeholder="أدخل كلمة المرور الجديدة"
       >
-      <button mat-icon-button matSuffix (click)="hideNew = !hideNew" [attr.aria-label]="'Hide password'" [attr.aria-pressed]="hideNew" type="button">
+      <button mat-icon-button matSuffix (click)="hideNew = !hideNew" [attr.aria-label]="hideNew ? 'إظهار كلمة المرور الجديدة' : 'إخفاء كلمة المرور الجديدة'" [attr.aria-pressed]="!hideNew" type="button">
         <mat-icon>{{hideNew ? 'visibility_off' : 'visibility'}}</mat-icon>
       </button>
 
@@ -51,7 +60,7 @@
       mat-flat-button
       color="primary"
       type="submit"
-      [disabled]="isLoading"
+      [disabled]="isLoading || changePasswordForm.invalid"
       class="w-full !py-3 !text-base !rounded-xl transition duration-200"
     >
       @if (!isLoading) {
@@ -62,4 +71,6 @@
     </button>
 
   </form>
-</div>
+    </section>
+  </div>
+</section>

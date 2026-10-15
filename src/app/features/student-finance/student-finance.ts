@@ -42,6 +42,7 @@ export class StudentFinance implements OnInit {
     payment: new FinanceOperationKey(), plan: new FinanceOperationKey(), installment: new FinanceOperationKey(),
   };
   private installmentContextId = '';
+  private installmentCurrency = 'EGP';
   private loadGeneration: Record<string, number> = {};
 
   tab = signal<FinanceTab>('payments');
@@ -61,6 +62,11 @@ export class StudentFinance implements OnInit {
   saving = signal(false);
   creditNeedsReview = signal(false);
   activeInstallment = signal<FinanceRecord | null>(null);
+  installmentStudentName = signal('');
+
+  selectedStudentName(): string {
+    return this.students().find(student => student.id === this.selectedStudentId)?.fullName || 'الطالب المحدد';
+  }
 
   paymentForm = this.fb.group({
     amount: [0, positive], currency: ['EGP', Validators.required], paymentMethod: ['', Validators.required],
@@ -101,6 +107,17 @@ export class StudentFinance implements OnInit {
     if (tab === 'credits') this.refreshCredits();
     if (tab === 'plans') this.refreshPlans();
     if (tab === 'provider') this.refreshProvider();
+  }
+
+  onTabKeydown(event: KeyboardEvent): void {
+    if (this.saving() || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tabs: FinanceTab[] = ['payments', 'credits', 'plans', 'provider'];
+    const current = tabs.indexOf(this.tab());
+    const index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 :
+      (current + (event.key === 'ArrowLeft' ? 1 : -1) + tabs.length) % tabs.length;
+    event.preventDefault();
+    this.setTab(tabs[index]);
+    (event.currentTarget as HTMLElement).querySelector<HTMLButtonElement>(`#tab-${tabs[index]}`)?.focus();
   }
 
   selectStudent(): void {
@@ -160,7 +177,7 @@ export class StudentFinance implements OnInit {
         installmentCount: 1, startDate: localDate(), firstDueDate: localDate() });
       this.operationKeys.plan.reset();
     } else if (name === 'installment') {
-      this.installmentForm.reset({ amount: 0, currency: 'EGP', paidAt: localDateTime() });
+      this.installmentForm.reset({ amount: 0, currency: this.installmentCurrency, paidAt: localDateTime() });
       this.operationKeys.installment.reset();
     } else this.creditForm.reset({ credits: 1, validityDays: 30 });
     this.clearError('form');
@@ -213,14 +230,16 @@ export class StudentFinance implements OnInit {
       'plan', 'تم إنشاء خطة الأقساط بنجاح.', () => { this.refreshPlans(); this.refreshSummary(); });
   }
 
-  payInstallment(installment: FinanceRecord, planCurrency = ''): void {
+  payInstallment(installment: FinanceRecord, planCurrency = '', studentName = ''): void {
     const id = this.text(installment, 'id', 'installmentId');
     if (!id || this.saving()) return;
     if (this.installmentContextId !== id) {
-      this.installmentForm.reset({ amount: 0, currency: this.text(installment, 'currency') || planCurrency || 'EGP', paidAt: localDateTime() });
+      this.installmentCurrency = this.text(installment, 'currency') || planCurrency || 'EGP';
+      this.installmentForm.reset({ amount: 0, currency: this.installmentCurrency, paidAt: localDateTime() });
       this.installmentContextId = id;
     }
     this.activeInstallment.set(installment);
+    this.installmentStudentName.set(studentName);
     this.showForm('installment');
   }
 

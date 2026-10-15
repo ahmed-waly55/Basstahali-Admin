@@ -10,6 +10,13 @@
     "src/app/features/student-finance/*.spec.ts",
     "src/app/features/courses/courses.spec.ts",
     "src/app/features/curriculum/curriculum.spec.ts",
-    "src/app/features/expenses/expenses.spec.ts"
+    "src/app/features/expenses/expenses.spec.ts",
+    "src/app/features/home/*.spec.ts",
+    "src/app/core/components/login/*.spec.ts",
+    "src/app/shared/components/header/*.spec.ts",
+    "src/app/features/settings/*.spec.ts",
+    "src/app/layouts/main/*.spec.ts",
+    "src/app/core/utils/*.spec.ts",
+    "src/app/features/analytics/analytics.spec.ts"
   ]
 }

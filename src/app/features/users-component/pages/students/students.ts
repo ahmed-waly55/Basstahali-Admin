@@ -1,9 +1,12 @@
 import { A11yModule } from '@angular/cdk/a11y';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit, DestroyRef, signal, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, DestroyRef, signal, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { FormArray, FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatPaginator, MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
+import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
@@ -51,6 +54,17 @@ export interface Student {
   initialPasswordSetupToken: string | null;
 }
 
+function studentPaginatorLabels(): MatPaginatorIntl {
+  const labels = new MatPaginatorIntl();
+  labels.itemsPerPageLabel = 'سجلات في الصفحة';
+  labels.nextPageLabel = 'الصفحة التالية';
+  labels.previousPageLabel = 'الصفحة السابقة';
+  labels.firstPageLabel = 'الصفحة الأولى';
+  labels.lastPageLabel = 'الصفحة الأخيرة';
+  labels.getRangeLabel = (page, size, length) => length ? `${page * size + 1}–${Math.min((page + 1) * size, length)} من ${length}` : '0 من 0';
+  return labels;
+}
+
 @Component({
   selector: 'app-students',
   standalone: true,
@@ -61,11 +75,15 @@ export interface Student {
     ReactiveFormsModule,
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
+    MatPaginatorModule,
+    MatSortModule,
     MatTooltipModule,
     MatTableModule
   ],
   templateUrl: './students.html',
   styleUrl: './students.css',
+  providers: [{ provide: MatPaginatorIntl, useFactory: studentPaginatorLabels }],
 })
 export class Students implements OnInit {
   private user = inject(User);
@@ -80,6 +98,7 @@ export class Students implements OnInit {
 
   readonly loading = signal(false);
   readonly saving = signal(false);
+  readonly detailsLoading = signal(false);
   readonly errorMessage = signal('');
   readonly editorError = signal('');
   readonly showArchived = signal(false);
@@ -167,12 +186,35 @@ export class Students implements OnInit {
   isModalOpen = false;
   isDetailsModalOpen = false;
   searchQuery = '';
+  statusFilter = '';
 
   selectedStudent: Student | null = null;
   displayedColumns: string[] = ['fullName', 'phoneNumber', 'expirationDate', 'status', 'actions'];
   dataSource = new MatTableDataSource<Student>([]);
 
+  @ViewChild(MatPaginator) set paginator(value: MatPaginator) { this.dataSource.paginator = value; }
+  @ViewChild(MatSort) set sort(value: MatSort) { this.dataSource.sort = value; }
+
+  get statusOptions(): string[] {
+    return [...new Set(this.dataSource.data.map(student => student.status).filter(Boolean))].sort();
+  }
+
+  statusLabel(status: string): string {
+    return ({ Active: 'نشط', Inactive: 'غير نشط', Suspended: 'موقوف', Expired: 'منتهي' } as Record<string, string>)[status] || status || 'غير محدد';
+  }
+
+  fieldError(name: string): boolean {
+    const control = this.studentForm.get(name);
+    return !!control?.invalid && !!control?.touched;
+  }
+
   ngOnInit(): void {
+    this.dataSource.filterPredicate = (student, raw) => {
+      const filter = JSON.parse(raw);
+      const text = [student.fullName, student.userName, student.phoneNumber, student.parentName, student.parentPhoneNumber].join(' ').toLowerCase();
+      return (!filter.status || student.status === filter.status) && (!filter.query || text.includes(filter.query));
+    };
+    this.dataSource.sortingDataAccessor = (student, field) => field === 'expirationDate' ? (Date.parse(student.expirationDate) || 0) : String(student[field as keyof Student] ?? '').toLowerCase();
     this.getStudents();
   }
 
@@ -182,13 +224,14 @@ export class Students implements OnInit {
     this.errorMessage.set('');
     const request = this.showArchived() ? this.user.getArchivedStudents() : this.user.getStudents();
     request.pipe(map(res => this.list(res)), finalize(() => { if (version === this.listVersion) this.loading.set(false); }), takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: items => { if (version === this.listVersion) this.dataSource.data = items; },
+      next: items => { if (version === this.listVersion) { this.dataSource.data = items; if (this.statusFilter && !this.statusOptions.includes(this.statusFilter)) { this.statusFilter = ''; this.applyFilter(); } } },
       error: error => { if (version === this.listVersion) this.errorMessage.set(this.errorText(error)); }
     });
   }
 
   toggleArchive(): void {
     this.showArchived.update(value => !value);
+    this.clearFilters();
     this.dataSource.data = [];
     this.getStudents();
   }
@@ -198,8 +241,11 @@ export class Students implements OnInit {
   }
 
   applyFilter() {
-    this.dataSource.filter = this.searchQuery.trim().toLowerCase();
+    this.dataSource.filter = JSON.stringify({ query: this.searchQuery.trim().toLowerCase(), status: this.statusFilter });
+    this.dataSource.paginator?.firstPage();
   }
+
+  clearFilters(): void { this.searchQuery = ''; this.statusFilter = ''; this.applyFilter(); }
 
   openModal(): void {
     this.editingId.set(null);
@@ -299,7 +345,8 @@ export class Students implements OnInit {
 
   openDetailsModal(student: Student): void {
     const version = ++this.detailVersion;
-    this.user.getStudentById(student.id).pipe(map(res => this.unwrap(res)), takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.detailsLoading.set(true);
+    this.user.getStudentById(student.id).pipe(map(res => this.unwrap(res)), finalize(() => { if (version === this.detailVersion) this.detailsLoading.set(false); }), takeUntilDestroyed(this.destroyRef)).subscribe({
       next: data => { if (version !== this.detailVersion) return; this.selectedStudent = data; this.isDetailsModalOpen = true; this.cdr.markForCheck(); },
       error: error => this.errorMessage.set(this.errorText(error))
     });
@@ -307,13 +354,14 @@ export class Students implements OnInit {
 
   closeDetailsModal() {
     this.detailVersion++;
+    this.detailsLoading.set(false);
     this.isDetailsModalOpen = false;
     this.selectedStudent = null;
   }
 
   async deleteStudent(id: string): Promise<void> {
     if (this.saving()) return;
-    const confirmation = await Swal.fire({ title: 'أرشفة الطالب؟', text: 'سيتم حذف الطالب عبر الخادم ويمكن استعادته من الأرشيف.', icon: 'warning', showCancelButton: true, confirmButtonText: 'أرشفة الطالب', cancelButtonText: 'إلغاء', confirmButtonColor: '#582b91' });
+    const confirmation = await Swal.fire({ title: 'أرشفة الطالب؟', text: 'سيُنقل الطالب إلى الأرشيف، ويمكن استعادته لاحقًا.', icon: 'warning', showCancelButton: true, confirmButtonText: 'أرشفة الطالب', cancelButtonText: 'إلغاء', confirmButtonColor: '#6241a5' });
     if (!confirmation.isConfirmed) return;
     this.runAction(this.user.deleteStudent(id));
   }
@@ -393,7 +441,7 @@ export class Students implements OnInit {
       `"${s.parentName || ''}"`,
       `"${s.parentPhoneNumber || ''}"`,
       `"${s.expirationDate ? s.expirationDate.split('T')[0] : 'غير محدد'}"`,
-      `"${s.status === 'Active' ? 'نشط' : 'غير نشط'}"`,
+      `"${this.statusLabel(s.status)}"`,
       s.sessions?.totalSessions ?? 0,
       s.sessions?.usedSessions ?? 0,
       s.sessions?.remainingSessions ?? 0

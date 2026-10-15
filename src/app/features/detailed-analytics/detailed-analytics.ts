@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -10,6 +10,7 @@ import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartOptions, ChartType, registerables, Chart } from 'chart.js';
 import { Subscription } from 'rxjs';
 import { AnalyticsService } from '../../core/services/analytics';
+import { ThemeService } from '../../core/services/theme';
 
 // تسجيل مكونات Chart.js الإجبارية للإصدارات الحديثة
 Chart.register(...registerables);
@@ -34,6 +35,7 @@ type ReportType = 'teachers' | 'students' | 'subjects' | 'courses' | 'curricula'
 })
 export class DetailedAnalytics implements OnInit, OnDestroy {
   private analyticsService = inject(AnalyticsService);
+  private theme = inject(ThemeService);
   private querySubscription?: Subscription;
 
   activeTab = signal<ReportType>('teachers');
@@ -41,13 +43,53 @@ export class DetailedAnalytics implements OnInit, OnDestroy {
   isLoading = signal<boolean>(false);
 
   // إعدادات الشارت المتجاوبة
-  public barChartOptions: ChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: true, position: 'top' },
-    }
-  };
+  public barChartOptions: ChartOptions = this.createChartOptions(false);
+
+  constructor() {
+    effect(() => {
+      const dark = this.theme.isDark();
+      this.barChartOptions = this.createChartOptions(dark);
+      this.barChartData = {
+        ...this.barChartData,
+        datasets: this.barChartData.datasets.map((dataset, index) => ({
+          ...dataset,
+          backgroundColor: this.chartColors[index % this.chartColors.length]
+        }))
+      };
+    });
+  }
+
+  private get chartColors(): string[] {
+    return this.theme.isDark() ? ['#b699ed', '#61d4ad'] : ['#6241a5', '#15805e'];
+  }
+
+  private createChartOptions(dark: boolean): ChartOptions {
+    const text = dark ? '#abb3c9' : '#767b8d';
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          rtl: true,
+          labels: { color: text, font: { family: 'Tajawal, sans-serif' } }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { color: text, font: { family: 'Tajawal, sans-serif' } },
+          border: { color: dark ? '#343b50' : '#e7e9f0' }
+        },
+        y: {
+          grid: { color: dark ? '#343b50' : '#e7e9f0' },
+          ticks: { color: text, font: { family: 'Tajawal, sans-serif' } },
+          border: { display: false }
+        }
+      }
+    };
+  }
   public barChartType: ChartType = 'bar';
   public barChartData: ChartConfiguration['data'] = {
     labels: [],
@@ -129,16 +171,16 @@ export class DetailedAnalytics implements OnInit, OnDestroy {
       this.barChartData = {
         labels: labels,
         datasets: [
-          { data: data.items.map((i: any) => i.realizedRevenue || 0), label: 'الإيرادات المحققة', backgroundColor: '#4f46e5' },
-          { data: data.items.map((i: any) => i.netProfit || i.grossProfit || 0), label: 'صافي الربح', backgroundColor: '#10b981' }
+          { data: data.items.map((i: any) => i.realizedRevenue || 0), label: 'الإيرادات المحققة', backgroundColor: this.chartColors[0] },
+          { data: data.items.map((i: any) => i.netProfit || i.grossProfit || 0), label: 'صافي الربح', backgroundColor: this.chartColors[1] }
         ]
       };
     } else {
       this.barChartData = {
         labels: labels,
         datasets: [
-          { data: data.items.map((i: any) => i.realizedRevenue || i.revenue || 0), label: 'الإيرادات', backgroundColor: '#6366f1' },
-          { data: data.items.map((i: any) => i.grossProfit || i.netProfit || 0), label: 'إجمالي الربح', backgroundColor: '#34d399' }
+          { data: data.items.map((i: any) => i.realizedRevenue || i.revenue || 0), label: 'الإيرادات', backgroundColor: this.chartColors[0] },
+          { data: data.items.map((i: any) => i.grossProfit || i.netProfit || 0), label: 'إجمالي الربح', backgroundColor: this.chartColors[1] }
         ]
       };
     }

@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Auth } from '../../services/auth';
-import Swal from 'sweetalert2';
+import { ThemeService } from '../../services/theme';
+import { finalize } from 'rxjs';
 
 // Angular Material Modules
 import { MatIconModule } from '@angular/material/icon';
@@ -42,9 +43,12 @@ export function emailOrPhoneValidator(): ValidatorFn {
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
-export class Login implements OnInit {
+export class Login {
+  readonly theme = inject(ThemeService);
   loginForm: FormGroup;
   hidePassword = true;
+  readonly isSubmitting = signal(false);
+  readonly loginError = signal('');
 
   constructor(
     private fb: FormBuilder,
@@ -58,65 +62,49 @@ export class Login implements OnInit {
     });
   }
 
-  ngOnInit(): void {
-    console.log('Login Component Initialized');
-  }
-
   onSubmit(): void {
+    if (this.isSubmitting()) return;
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
     }
 
-    this._Auth.login(this.loginForm.value).subscribe({
+    this.loginError.set('');
+    this.isSubmitting.set(true);
+    this._Auth.login(this.loginForm.value).pipe(
+      finalize(() => this.isSubmitting.set(false))
+    ).subscribe({
       next: (response) => {
-        try {
-          const accessToken = response?.data?.accessToken || response?.data?.token || response?.token;
-          const refreshToken = response?.data?.refreshToken || response?.refreshToken;
-          const user = response?.data?.user?.fullName || response?.data?.userName || 'المشرف';
+        const accessToken = response?.data?.accessToken || response?.data?.token || response?.token;
+        const refreshToken = response?.data?.refreshToken || response?.refreshToken;
+        const user = response?.data?.user?.fullName || response?.data?.userName || 'المشرف';
 
-          if (accessToken) {
-            localStorage.setItem('accessToken', accessToken);
-            localStorage.setItem('token', accessToken);
-          }
-          if (refreshToken) {
-            localStorage.setItem('refreshToken', refreshToken);
-          }
-          localStorage.setItem('user', user);
-        } catch (storageError) {
-          console.error('خطأ أثناء حفظ الجلسة:', storageError);
+        if (!accessToken) {
+          this.loginError.set('تعذر إتمام تسجيل الدخول. يرجى المحاولة مرة أخرى.');
+          return;
         }
 
-        Swal.fire({
-          icon: 'success',
-          title: 'تم تسجيل الدخول بنجاح',
-          text: 'مرحباً بك في لوحة تحكم بسطهالي',
-          timer: 1600,
-          timerProgressBar: true,
-          showConfirmButton: false,
-          allowOutsideClick: false,
-          background: '#ffffff',
-          iconColor: '#311060'
-        }).then(() => {
-          this.router.navigate(['/home']);
-        });
+        try {
+          localStorage.setItem('accessToken', accessToken);
+          localStorage.setItem('token', accessToken);
+          if (refreshToken) localStorage.setItem('refreshToken', refreshToken);
+          localStorage.setItem('user', user);
+        } catch {
+          this.loginError.set('تعذر حفظ الجلسة. يرجى السماح بالتخزين في المتصفح والمحاولة مجددًا.');
+          return;
+        }
+
+        this.router.navigate(['/home']);
       },
       error: (err) => {
-        console.error('خطأ تسجيل الدخول:', err);
-
-        const errorMsg =
-          err?.error?.message ||
-          err?.message ||
-          'برجاء التأكد من البريد الإلكتروني أو رقم الهاتف أو كلمة المرور';
-
-        Swal.fire({
-          icon: 'error',
-          title: 'فشل تسجيل الدخول',
-          text: errorMsg,
-          confirmButtonColor: '#311060',
-          confirmButtonText: 'حسناً',
-          background: '#ffffff'
-        });
+        const serverMessage = err?.error?.message;
+        this.loginError.set(
+          typeof serverMessage === 'string' && serverMessage.trim()
+            ? serverMessage
+            : err?.status === 0
+              ? 'تعذر الاتصال بالخادم. تحقق من اتصالك وحاول مرة أخرى.'
+              : 'تعذر تسجيل الدخول. تأكد من البريد الإلكتروني أو رقم الهاتف وكلمة المرور.'
+        );
       }
     });
   }

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ChangeDetectorRef, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AnalyticsService } from '../../core/services/analytics';
 import { MatCardModule } from '@angular/material/card';
@@ -10,7 +10,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTabsModule } from '@angular/material/tabs';
 import { Subject, take, takeUntil } from 'rxjs';
-import * as XLSX from 'xlsx';
+import { buildFinancialWorkbook, financialWorkbookFileName } from '../../core/utils/financial-workbook';
 
 @Component({
   selector: 'app-analytics',
@@ -45,6 +45,8 @@ export class Analytics implements OnInit, OnDestroy {
   studentPayments: any[] = [];
   studentProfitability: any[] = [];
   costsTableData: any[] = [];
+  readonly exporting = signal(false);
+  readonly exportError = signal('');
 
   // Table columns definition
   displayedColumnsTransactions: string[] = ['type', 'amount', 'direction', 'description', 'createdAt'];
@@ -141,57 +143,24 @@ export class Analytics implements OnInit, OnDestroy {
       });
   }
 
-  // دالة تصدير التقرير إلى إكسل (مع فصلها عن الـ Main Thread لمنع الـ Lag)
-  exportToExcel(): void {
-    setTimeout(() => {
-      const transactionsWS = XLSX.utils.json_to_sheet(this.transactions.map(item => ({
-        'نوع الحركة': item.type,
-        'المبلغ': item.amount,
-        'الاتجاه': item.direction === 'Credit' ? 'إيداع' : 'سحب',
-        'الوصف': item.description,
-        'التاريخ والوقت': item.createdAt
-      })));
-
-      const paymentsWS = XLSX.utils.json_to_sheet(this.studentPayments.map(item => ({
-        'اسم الطالب': item.studentName,
-        'المبلغ المدفوع': item.amount,
-        'طريقة الدفع': item.paymentMethod,
-        'الحالة': item.status,
-        'مسجل بواسطة': item.recordedByName,
-        'تاريخ الدفع': item.paidAt
-      })));
-
-      // تحديث شيت إكسل الخاص بربحية الطلاب ليشمل البيانات الجديدة بالتفصيل
-      const profitabilityWS = XLSX.utils.json_to_sheet(this.studentProfitability.map(item => ({
-        'اسم الطالب': item.fullName || 'غير متوفر',
-        'رقم الهاتف': item.phoneNumber || 'غير متوفر',
-        'عدد الجلسات': item.sessionsReceived,
-        'إيرادات الطالب': item.studentRevenue,
-        'إجمالي المدفوع': item.totalPaid,
-        'المبلغ غير المحقق': item.unrealizedPaidAmount,
-        'متوسط سعر جلسة الطالب': item.averageStudentSessionPrice,
-        'متوسط معدل المعلم': item.averageTeacherSessionRate,
-        'إجمالي التكلفة': item.teacherCost,
-        'صافي الربح': item.netProfit,
-        'هامش الربح (%)': item.profitMarginPercentage
-      })));
-
-      const costsWS = XLSX.utils.json_to_sheet(this.costsTableData.map(item => ({
-        'بند المصروفات والتكاليف': item.title,
-        'القيمة الحالية': item.currentValue,
-        'القيمة السابقة': item.previousValue,
-        'نسبة التغير / النمو (%)': item.growthPercentage
-      })));
-
-      const workbook: XLSX.WorkBook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, transactionsWS, 'الحركات المالية');
-      XLSX.utils.book_append_sheet(workbook, paymentsWS, 'مدفوعات الطلاب');
-      XLSX.utils.book_append_sheet(workbook, profitabilityWS, 'ربحية الطلاب');
-      XLSX.utils.book_append_sheet(workbook, costsWS, 'المصروفات والتكاليف');
-
-      const fileName = `Financial_Analytics_Report_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      XLSX.writeFile(workbook, fileName);
-    }, 0);
+  async exportToExcel(): Promise<void> {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.exportError.set('');
+    try {
+      const sheets = buildFinancialWorkbook({
+        transactions: this.transactions,
+        studentPayments: this.studentPayments,
+        studentProfitability: this.studentProfitability,
+        costs: this.costsTableData,
+      });
+      const { default: writeExcelFile } = await import('write-excel-file/browser');
+      await writeExcelFile(sheets).toFile(financialWorkbookFileName());
+    } catch {
+      this.exportError.set('تعذر تصدير التقرير. حاول مرة أخرى.');
+    } finally {
+      this.exporting.set(false);
+    }
   }
 
   ngOnDestroy(): void {

@@ -97,6 +97,33 @@ describe('StudentFinance financial operation validation', () => {
     component.submitCredit(); expect(service.createCreditBatch).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the installment owner even when a different student account is selected', () => {
+    component.students.set([{ id: component.selectedStudentId, fullName: 'الطالب الأول' }]);
+    component.payInstallment({ id: 'other-student-installment' }, 'USD', 'الطالب الثاني');
+    expect(component.selectedStudentName()).toBe('الطالب الأول');
+    expect(component.installmentStudentName()).toBe('الطالب الثاني');
+    expect(component.installmentForm.controls.currency.value).toBe('USD');
+    component.newOperation();
+    expect(component.installmentForm.controls.currency.value).toBe('USD');
+  });
+
+  it('moves focus and selection together when navigating the tabs with RTL arrow keys', () => {
+    const nav = document.createElement('nav');
+    nav.innerHTML = '<button id="tab-payments">المدفوعات</button><button id="tab-credits">رصيد الحصص</button>';
+    nav.addEventListener('keydown', event => component.onTabKeydown(event));
+    document.body.append(nav);
+    try {
+      const next = new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true });
+      nav.dispatchEvent(next);
+      expect(next.defaultPrevented).toBe(true);
+      expect(component.tab()).toBe('credits');
+      expect(document.activeElement?.id).toBe('tab-credits');
+      nav.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+      expect(component.tab()).toBe('payments');
+      expect(document.activeElement?.id).toBe('tab-payments');
+    } finally { nav.remove(); }
+  });
+
   it('rejects whitespace-only required payment strings', () => {
     validPayment(); component.paymentForm.patchValue({ purpose: '   ' }); component.submitPayment();
     expect(service.recordPayment).not.toHaveBeenCalled(); expect(component.errors()['form']).toBeTruthy();

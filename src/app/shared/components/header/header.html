@@ -1,130 +1,40 @@
-<header class="h-[76px] px-4 md:px-8 bg-white/80 backdrop-blur-md border-b border-[#eee8f4] flex items-center justify-between sticky top-0 z-30 transition-all duration-300 shadow-xs" dir="rtl">
-
-  <!-- Right Section: Sidebar Toggle & Welcome Text -->
-  <div class="flex items-center gap-3">
-    <button mat-icon-button (click)="toggleSidebar.emit()" aria-label="فتح أو إغلاق القائمة" [attr.aria-expanded]="isSidebarOpen"
-            class="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/60 rounded-xl transition-all duration-200">
-      <mat-icon>{{ isSidebarOpen ? 'menu_open' : 'menu' }}</mat-icon>
-    </button>
-
-    <div class="hidden sm:flex flex-col text-right">
-      <h1 class="text-sm font-bold text-slate-800 tracking-tight">مساحة إدارة بسطهالي</h1>
-      <span class="text-xs text-slate-400 font-medium">أهلًا {{ userName || 'بك' }}، يوم جديد نصنع فيه فرقًا</span>
-    </div>
+<header class="topbar" dir="rtl">
+  <div class="page-context">
+    <button mat-icon-button type="button" (click)="toggleSidebar.emit()" aria-label="فتح أو إغلاق القائمة" aria-controls="admin-sidebar" [attr.aria-expanded]="isSidebarOpen"><mat-icon>{{ isSidebarOpen ? 'menu_open' : 'menu' }}</mat-icon></button>
+    <div class="page-location"><nav aria-label="مسار التنقل"><a routerLink="/home">بسطهالي</a><mat-icon aria-hidden="true">chevron_left</mat-icon><span>{{ currentPage().section }}</span></nav><strong>{{ currentPage().label }}</strong></div>
   </div>
-
-  <!-- Left Section: Actions & Profile -->
-  <div class="flex items-center gap-2 md:gap-3">
-
-    <!-- Notifications Button & Bell -->
-    <div class="relative">
-      <button mat-icon-button [matMenuTriggerFor]="notificationsMenu"
-              class="w-10 h-10 rounded-xl bg-slate-50/80 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 border border-[#eee8f4] flex items-center justify-center transition-all duration-200 relative group"
-              matTooltip="الإشعارات">
-        <mat-icon class="transition-transform duration-300 group-hover:scale-110">notifications_none</mat-icon>
-
-        <!-- شارة العدد (Badge) بتصميم مميز وناعم -->
-        @if (unreadCount() > 0) {
-          <span class="absolute -top-1 -right-1 px-1.5 py-0.5 bg-rose-500 text-white text-[10px] font-bold rounded-full ring-2 ring-white shadow-sm animate-pulse min-w-[20px] text-center">
-            {{ unreadCount() > 99 ? '+99' : unreadCount() }}
-          </span>
-        }
-      </button>
-    </div>
-
-    <!-- قائمة الإشعارات المُنسقة -->
-    <mat-menu #notificationsMenu="matMenu" xPosition="after" class="mt-3 w-80 md:w-96 rounded-2xl shadow-2xl shadow-slate-300/50 border border-[#eee8f4] p-0 overflow-hidden bg-white">
-
-      <!-- الهيدر الخاص بالقائمة -->
-      <div class="px-4 py-3.5 bg-gradient-to-l from-slate-50 to-indigo-50/30 border-b border-[#eee8f4] flex justify-between items-center">
-        <div class="flex items-center gap-2">
-          <span class="font-bold text-xs text-slate-800">التنبيهات والنشاطات</span>
-          @if (unreadCount() > 0) {
-            <span class="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs">
-              {{ unreadCount() }} جديد
-            </span>
-          }
-        </div>
-        <button (click)="onMarkAllAsRead(); $event.stopPropagation()" class="text-[11px] text-indigo-600 font-semibold hover:text-indigo-700 hover:underline bg-transparent border-none cursor-pointer transition-colors">
-          تحديد الكل مقروء
-        </button>
-      </div>
-
-      <!-- جسم الإشعارات -->
-      <div class="max-h-80 overflow-y-auto divide-y divide-slate-100">
-        @if (notificationsList().length > 0) {
-          @for (notif of notificationsList(); track notif.id) {
-            <div (click)="onMarkAsRead(notif.id)"
-                 class="flex items-start gap-3.5 p-3.5 transition-all cursor-pointer hover:bg-slate-50 text-right relative group"
-                 [ngClass]="notif.isRead ? 'bg-white opacity-70' : 'bg-indigo-50/25'">
-
-              <!-- أيقونة الإشعار بتصميم ناعم -->
-              <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-xs transition-transform group-hover:scale-105"
-                   [ngClass]="notif.isRead ? 'bg-slate-100 text-slate-400' : 'bg-indigo-100 text-indigo-600'">
-                <mat-icon class="text-base">
-                  {{ notif.isRead ? 'notifications_none' : 'notifications_active' }}
-                </mat-icon>
-              </div>
-
-              <!-- تفاصيل الإشعار -->
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-1">
-                  <p class="text-xs font-bold text-slate-800 truncate">
-                    {{ notif.title }}
-                  </p>
-                  @if (!notif.isRead) {
-                    <span class="w-2 h-2 rounded-full bg-indigo-600 shrink-0 shadow-xs animate-pulse"></span>
-                  }
-                </div>
-
-                <p class="text-[11px] text-slate-600 mt-1 leading-relaxed break-words">
-                  {{ notif.body }}
-                </p>
-
-                <span class="text-[10px] text-slate-400 block mt-1.5 font-medium">
-                  {{ notif.createdAt | date: 'medium' }}
-                </span>
-              </div>
-            </div>
-          }
-        } @else {
-          <div class="text-center py-10 text-slate-400 text-xs flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 mb-1">
-              <mat-icon class="text-2xl">notifications_off</mat-icon>
-            </div>
-            <span class="font-medium text-slate-500">لا توجد إشعارات جديدة حالياً</span>
-          </div>
-        }
-      </div>
-    </mat-menu>
-
-    <div class="h-5 w-[1px] bg-slate-100 mx-1"></div>
-
-    <!-- User Profile Button -->
-    <button class="flex items-center gap-2.5 pr-2 md:pr-3 pl-1.5 py-1.5 rounded-full bg-slate-50/80 hover:bg-indigo-600/10 border border-[#eee8f4] transition-all duration-300 group" [matMenuTriggerFor]="userMenu">
-      <div class="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 flex items-center justify-center ring-2 ring-white shadow-xs">
-        <i class="fa-solid fa-user text-xs"></i>
-      </div>
-      <div class="hidden md:flex flex-col text-right">
-        <span class="text-xs font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">{{userName}}</span>
-        <span class="text-[10px] text-slate-400 font-medium">مدير عام</span>
-      </div>
-      <mat-icon class="text-slate-400 text-sm hidden md:block">expand_more</mat-icon>
-    </button>
-
-    <mat-menu #userMenu="matMenu" xPosition="after" class="mt-3 w-60 rounded-2xl shadow-xl shadow-slate-200/50 border border-[#eee8f4] p-2">
-      <button mat-menu-item routerLink="/settings" class="flex items-center gap-2.5 text-slate-600 hover:text-indigo-600 rounded-xl my-0.5 h-10">
-        <mat-icon class="text-base text-slate-400">person_outline</mat-icon>
-        <span class="text-xs font-medium">الملف الشخصي</span>
-      </button>
-
-      <div class="h-[1px] bg-slate-100 my-1"></div>
-
-      <button mat-menu-item (click)="logout()" class="flex items-center gap-2.5 text-rose-600 hover:bg-rose-50/60 rounded-xl my-0.5 h-10">
-        <mat-icon class="text-base text-rose-500">logout</mat-icon>
-        <span class="text-xs font-medium">تسجيل الخروج</span>
-      </button>
-    </mat-menu>
-
+  <div class="topbar-actions">
+    <span class="today">{{ displayDate }}</span>
+    <button type="button" class="navigation-search" (click)="openNavigation()" aria-label="البحث في صفحات الإدارة"><mat-icon aria-hidden="true">search</mat-icon><span>ابحث عن صفحة...</span><kbd>Ctrl K</kbd></button>
+    <button mat-icon-button type="button" (click)="theme.toggle()" [attr.aria-label]="theme.isDark() ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'" [matTooltip]="theme.isDark() ? 'الوضع الفاتح' : 'الوضع الداكن'" [attr.aria-pressed]="theme.isDark()"><mat-icon>{{ theme.isDark() ? 'light_mode' : 'dark_mode' }}</mat-icon></button>
+    <button mat-icon-button type="button" [matMenuTriggerFor]="notificationsMenu" aria-label="الإشعارات" class="notifications-button"><mat-icon>notifications_none</mat-icon>@if (unreadCount() > 0) { <span class="notification-count">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span> }</button>
+    <span class="toolbar-divider" aria-hidden="true"></span>
+    <button type="button" class="profile-button" [matMenuTriggerFor]="userMenu" aria-label="قائمة الحساب"><span class="profile-avatar" aria-hidden="true">{{ initials }}</span><span class="profile-label"><strong>{{ userName }}</strong><small>حساب الإدارة</small></span><mat-icon>expand_more</mat-icon></button>
   </div>
+  @if (activity.busy()) { <div class="request-progress" role="status" aria-label="جاري تحميل البيانات"><span></span></div> }
 </header>
+
+<mat-menu #notificationsMenu="matMenu" class="admin-notifications-menu" xPosition="before">
+  <div class="notifications-heading" (click)="$event.stopPropagation()"><strong>الإشعارات</strong><button mat-button type="button" [disabled]="!unreadCount() || notificationSaving()" (click)="onMarkAllAsRead()">قراءة الكل</button></div>
+  @if (notificationsLoading()) { <p class="notification-state" role="status">جارٍ التحميل...</p> }
+  @if (notificationsError()) { <div class="notification-state" (click)="$event.stopPropagation()"><p role="alert">{{ notificationsError() }}</p><button mat-button (click)="loadNotifications()" [disabled]="notificationsLoading()">إعادة المحاولة</button></div> }
+  @for (notification of notificationsList(); track notification.id) {
+    <button mat-menu-item class="notification-item" [class.is-unread]="!notification.isRead" [disabled]="notificationSaving()" (click)="onMarkAsRead(notification.id)"><mat-icon>{{ notification.isRead ? 'notifications_none' : 'notifications_active' }}</mat-icon><span><strong>{{ notification.title }}</strong><span class="notification-body">{{ notification.body }}</span><small>{{ notification.createdAt | date:'short' }}</small></span></button>
+  } @empty { @if (!notificationsLoading() && !notificationsError()) { <p class="notification-state">لا توجد إشعارات حاليًا.</p> } }
+</mat-menu>
+<mat-menu #userMenu="matMenu" xPosition="before">
+  <button mat-menu-item routerLink="/settings"><mat-icon>settings</mat-icon><span>إعدادات الحساب</span></button>
+  <button mat-menu-item (click)="theme.setPreference('system')"><mat-icon>contrast</mat-icon><span>المظهر حسب إعداد الجهاز</span></button>
+  <button mat-menu-item (click)="logout()"><mat-icon>logout</mat-icon><span>تسجيل الخروج</span></button>
+</mat-menu>
+<ng-template #navigationDialog>
+  <section class="navigation-dialog" dir="rtl">
+    <header><h2>انتقال سريع</h2><span>ابحث في صفحات الإدارة</span></header>
+    <div class="command-input"><mat-icon aria-hidden="true">search</mat-icon><input role="combobox" aria-label="اسم الصفحة" aria-controls="admin-search-results" aria-autocomplete="list" aria-expanded="true" [attr.aria-activedescendant]="results().length ? 'admin-search-result-' + activeResult() : null" placeholder="الطلاب، المدفوعات، جدول الحصص..." [ngModel]="query()" (ngModelChange)="search($event)" (keydown)="searchKeydown($event)" autocomplete="off" /></div>
+    <div role="listbox" aria-label="نتائج الصفحات" id="admin-search-results" class="command-results">
+      @for (item of results(); track item.route; let index = $index) { <button type="button" role="option" [attr.id]="'admin-search-result-' + index" [attr.aria-selected]="index === activeResult()" [class.is-selected]="index === activeResult()" (click)="navigate(item.route)"><mat-icon aria-hidden="true">{{ item.icon }}</mat-icon><span><strong>{{ item.label }}</strong><small>{{ item.section }}</small></span><mat-icon class="result-arrow" aria-hidden="true">north_west</mat-icon></button> }
+      @empty { <p role="status" class="command-empty">لا توجد صفحة مطابقة. جرّب اسمًا آخر.</p> }
+    </div>
+    <footer><span><kbd>↑</kbd> <kbd>↓</kbd> للتنقل <kbd>Enter</kbd> للفتح</span><span><kbd>Esc</kbd> للإغلاق</span></footer>
+  </section>
+</ng-template>

@@ -1,41 +1,9 @@
-<div class="min-h-screen bg-[#f7f6fa] flex flex-col font-sans relative overflow-x-hidden" dir="rtl">
-
-  <!-- خلفية معتمة تظهر فقط في الموبايل عند فتح السيدبار وعند الضغط عليها يغلق -->
-  @if (isSidebarOpen) {
-    <div (click)="closeSidebar()"
-         class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 md:hidden transition-opacity cursor-pointer">
-    </div>
-  }
-
-  <!-- Main Wrapper -->
-  <div class="flex flex-1 relative">
-
-    <!-- Sidebar Component -->
-    <app-sidebar
-      [class.translate-x-full]="!isSidebarOpen"
-      class="fixed top-0 right-0 h-screen z-50 transition-transform duration-300 ease-in-out">
-    </app-sidebar>
-
-    <!-- Main Content Area -->
-    <div class="flex-1 flex flex-col min-w-0 transition-all duration-300 pt-[76px]"
-         [class.md:mr-64]="isSidebarOpen"
-         [class.md:mr-0]="!isSidebarOpen">
-
-      <!-- Header Component -->
-      <app-header
-        [isSidebarOpen]="isSidebarOpen"
-        (toggleSidebar)="onToggleSidebar()"
-        class="fixed top-0 left-0 right-0 z-30 transition-all duration-300"
-        [class.md:right-64]="isSidebarOpen"
-        [class.md:right-0]="!isSidebarOpen">
-      </app-header>
-
-      <!-- Dynamic Page Content -->
-      <main class="flex-1 p-4 md:p-7 lg:p-9 max-w-[1680px] w-full mx-auto">
-        <router-outlet></router-outlet>
-      </main>
-
-    </div>
+<div class="admin-shell" dir="rtl" [class.sidebar-open]="isSidebarOpen">
+  <a class="skip-link" href="#admin-main">تخطي إلى المحتوى</a>
+  @if (isSidebarOpen && isMobileViewport) { <button type="button" tabindex="-1" class="sidebar-backdrop" aria-label="إغلاق قائمة التنقل" (click)="closeSidebar()"></button> }
+  <app-sidebar id="admin-sidebar" class="admin-sidebar" [attr.inert]="!isSidebarOpen ? '' : null" [attr.aria-hidden]="!isSidebarOpen" [cdkTrapFocus]="isMobileViewport && isSidebarOpen" [cdkTrapFocusAutoCapture]="isMobileViewport && isSidebarOpen" (closeRequested)="closeSidebar()"></app-sidebar>
+  <div class="admin-workspace">
+    <app-header class="admin-header" [isSidebarOpen]="isSidebarOpen" (toggleSidebar)="onToggleSidebar()" (navigationOpened)="onNavigationOpened()"></app-header>
+    <main id="admin-main" class="admin-main" tabindex="-1"><router-outlet></router-outlet></main>
   </div>
-
 </div>
