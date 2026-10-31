@@ -5,13 +5,15 @@ import { FormArray, FormBuilder, FormsModule, ReactiveFormsModule, Validators } 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatPaginator, MatPaginatorIntl, MatPaginatorModule } from '@angular/material/paginator';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { finalize, map, Observable } from 'rxjs';
+import { debounceTime, finalize, map, Observable, Subject } from 'rxjs';
+import { loadDirectoryOptions } from '../../../../core/utils/directory-options';
+import { DirectoryPage, DirectoryPageChange, parseDirectoryPage } from '../../../../core/models/directory-page';
+import { DirectoryPaginator } from '../../../../shared/components/directory-paginator/directory-paginator';
 import Swal from 'sweetalert2';
 import { CurriculumService } from '../../../../core/services/curriculum-service';
 import { Account } from '../../../../core/services/account';
@@ -39,12 +41,12 @@ export interface Student {
   parentName: string;
   parentPhoneNumber: string;
   gradeLevelId: string;
-  educationStageId?: string;
+  educationStageId?: string | null;
   subjectIds?: string[];
   subjects?: { id: string }[];
   curriculumId: string;
   sessionCreditBalance: number;
-  expirationDate: string;
+  expirationDate: string | null;
   status: string;
   teacherAssignments: TeacherAssignment[];
   userName: string;
@@ -52,17 +54,6 @@ export interface Student {
   sessions?: SessionsInfo;
   requiresPasswordSetup: boolean;
   initialPasswordSetupToken: string | null;
-}
-
-function studentPaginatorLabels(): MatPaginatorIntl {
-  const labels = new MatPaginatorIntl();
-  labels.itemsPerPageLabel = 'سجلات في الصفحة';
-  labels.nextPageLabel = 'الصفحة التالية';
-  labels.previousPageLabel = 'الصفحة السابقة';
-  labels.firstPageLabel = 'الصفحة الأولى';
-  labels.lastPageLabel = 'الصفحة الأخيرة';
-  labels.getRangeLabel = (page, size, length) => length ? `${page * size + 1}–${Math.min((page + 1) * size, length)} من ${length}` : '0 من 0';
-  return labels;
 }
 
 @Component({
@@ -76,14 +67,13 @@ function studentPaginatorLabels(): MatPaginatorIntl {
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
-    MatPaginatorModule,
+    DirectoryPaginator,
     MatSortModule,
     MatTooltipModule,
     MatTableModule
   ],
   templateUrl: './students.html',
   styleUrl: './students.css',
-  providers: [{ provide: MatPaginatorIntl, useFactory: studentPaginatorLabels }],
 })
 export class Students implements OnInit {
   private user = inject(User);
@@ -96,6 +86,19 @@ export class Students implements OnInit {
   private account = inject(Account);
   private destroyRef = inject(DestroyRef);
 
+  private readonly searchChanges = new Subject<string>();
+  private failedPage: DirectoryPageChange | null = null;
+  private appliedSearch = '';
+  private displayedSearch = '';
+  readonly directory = signal<DirectoryPage<Student> | null>(null);
+  readonly visibleStudents = signal<Student[]>([]);
+  pageNumber = 1;
+  pageSize = 20;
+  get serverPaging(): boolean { return this.directory()?.serverPaged ?? true; }
+  get totalCount(): number | null { return this.serverPaging ? this.directory()?.totalCount ?? null : this.dataSource.filteredData.length; }
+  get totalPages(): number | null { return this.serverPaging ? this.directory()?.totalPages ?? null : Math.ceil(this.dataSource.filteredData.length / this.pageSize); }
+  get hasPreviousPage(): boolean { return this.serverPaging ? this.directory()?.hasPreviousPage ?? false : this.pageNumber > 1; }
+  get hasNextPage(): boolean { return this.serverPaging ? this.directory()?.hasNextPage ?? false : this.pageNumber < (this.totalPages ?? 0); }
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly detailsLoading = signal(false);
@@ -110,7 +113,7 @@ export class Students implements OnInit {
   readonly editingId = signal<string | null>(null);
   readonly subjectsNeedReview = signal(false);
   private creditKeys = new Map<string, string>();
-  private originalExpiration = '';
+  private originalExpiration: string | null = null;
   private originalExpirationInput = '';
   readonly uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   private uuidValidators = [Validators.required, Validators.pattern(this.uuidPattern)];
@@ -173,7 +176,7 @@ export class Students implements OnInit {
       [this.curriculumService.getCurriculums(), this.curriculums],
       [this.curriculumService.getGradeLevels(), this.gradeLevels],
       [this.curriculumService.getSubjects(), this.subjects],
-      [this.account.getTeachers(), this.teachers]
+      [loadDirectoryOptions<any>(query => this.account.getTeachers(query)), this.teachers]
     ];
     for (const [request, target] of lookups) {
       request.pipe(map(res => this.list(res)), takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -192,11 +195,10 @@ export class Students implements OnInit {
   displayedColumns: string[] = ['fullName', 'phoneNumber', 'expirationDate', 'status', 'actions'];
   dataSource = new MatTableDataSource<Student>([]);
 
-  @ViewChild(MatPaginator) set paginator(value: MatPaginator) { this.dataSource.paginator = value; }
-  @ViewChild(MatSort) set sort(value: MatSort) { this.dataSource.sort = value; }
+  @ViewChild(MatSort) set sort(value: MatSort) { this.dataSource.sort = value; this.refreshRows(); }
 
   get statusOptions(): string[] {
-    return [...new Set(this.dataSource.data.map(student => student.status).filter(Boolean))].sort();
+    return [...new Set([...this.dataSource.data.map(student => student.status), this.statusFilter].filter(Boolean))].sort();
   }
 
   statusLabel(status: string): string {
@@ -214,25 +216,76 @@ export class Students implements OnInit {
       const text = [student.fullName, student.userName, student.phoneNumber, student.parentName, student.parentPhoneNumber].join(' ').toLowerCase();
       return (!filter.status || student.status === filter.status) && (!filter.query || text.includes(filter.query));
     };
-    this.dataSource.sortingDataAccessor = (student, field) => field === 'expirationDate' ? (Date.parse(student.expirationDate) || 0) : String(student[field as keyof Student] ?? '').toLowerCase();
+    this.dataSource.sortingDataAccessor = (student, field) => field === 'expirationDate' ? (Date.parse(student.expirationDate ?? '') || 0) : String(student[field as keyof Student] ?? '').toLowerCase();
+    this.searchChanges.pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef)).subscribe(query => {
+      if (query !== this.searchQuery.trim()) return;
+      this.appliedSearch = query; this.pageNumber = 1; this.getStudents();
+    });
     this.getStudents();
   }
 
   getStudents(): void {
     const version = ++this.listVersion;
-    this.loading.set(true);
-    this.errorMessage.set('');
-    const request = this.showArchived() ? this.user.getArchivedStudents() : this.user.getStudents();
-    request.pipe(map(res => this.list(res)), finalize(() => { if (version === this.listVersion) this.loading.set(false); }), takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: items => { if (version === this.listVersion) { this.dataSource.data = items; if (this.statusFilter && !this.statusOptions.includes(this.statusFilter)) { this.statusFilter = ''; this.applyFilter(); } } },
-      error: error => { if (version === this.listVersion) this.errorMessage.set(this.errorText(error)); }
+    const requestedPage = this.pageNumber;
+    const requestedSize = this.pageSize;
+    const previous = this.directory();
+    this.failedPage = null;
+    const query = { PageNumber: requestedPage, PageSize: this.pageSize, ...(this.appliedSearch ? { Search: this.appliedSearch } : {}) };
+    this.loading.set(true); this.errorMessage.set('');
+    const request = this.showArchived() ? this.user.getArchivedStudents(query) : this.user.getStudents(query);
+    request.pipe(map(response => parseDirectoryPage<Student>(response, requestedPage, this.pageSize)), finalize(() => { if (version === this.listVersion) this.loading.set(false); }), takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: page => {
+        if (version !== this.listVersion) return;
+        if (page.serverPaged && page.totalPages !== null && requestedPage > Math.max(1,page.totalPages)) {
+          this.pageNumber = Math.max(1,page.totalPages); this.getStudents(); return;
+        }
+        this.displayedSearch = this.appliedSearch;
+        this.directory.set(page); this.pageNumber = page.pageNumber; this.pageSize = page.pageSize;
+        this.dataSource.data = page.items; this.refreshRows();
+      },
+      error: error => {
+        if (version !== this.listVersion) return;
+        this.failedPage = {pageNumber:requestedPage,pageSize:requestedSize};
+        if (this.appliedSearch !== this.displayedSearch) {
+          this.directory.set(null); this.dataSource.data = []; this.visibleStudents.set([]); this.pageNumber = 1;
+        } else if (previous) { this.pageNumber = previous.pageNumber; this.pageSize = previous.pageSize; }
+        this.errorMessage.set(this.errorText(error));
+      }
     });
   }
 
+  retryStudents(): void {
+    if (this.failedPage) { this.pageNumber = this.failedPage.pageNumber; this.pageSize = this.failedPage.pageSize; }
+    this.getStudents();
+  }
+
+  changePage(change: DirectoryPageChange): void {
+    if (this.loading() || this.saving()) return;
+    this.pageNumber = change.pageSize !== this.pageSize ? 1 : change.pageNumber;
+    this.pageSize = change.pageSize;
+    if (this.serverPaging) this.getStudents(); else this.refreshRows();
+  }
+
+  searchStudents(): void {
+    this.pageNumber = 1;
+    if (this.serverPaging) {
+      ++this.listVersion; this.loading.set(true); this.searchChanges.next(this.searchQuery.trim());
+    } else this.refreshRows();
+  }
+
+  refreshRows(): void {
+    this.dataSource.filter = JSON.stringify({ query: this.serverPaging ? '' : this.searchQuery.trim().toLowerCase(), status: this.statusFilter });
+    const filtered = this.dataSource.filteredData;
+    const rows = this.dataSource.sort?.active ? this.dataSource.sortData([...filtered], this.dataSource.sort) : [...filtered];
+    if (!this.serverPaging) this.pageNumber = Math.min(this.pageNumber, Math.max(1,Math.ceil(rows.length/this.pageSize)));
+    const offset = (this.pageNumber-1)*this.pageSize;
+    this.visibleStudents.set(this.serverPaging ? rows : rows.slice(offset,offset+this.pageSize));
+  }
+
   toggleArchive(): void {
-    this.showArchived.update(value => !value);
-    this.clearFilters();
-    this.dataSource.data = [];
+    this.showArchived.update(value => !value); this.pageNumber = 1;
+    this.searchQuery = ''; this.appliedSearch = ''; this.statusFilter = '';
+    this.directory.set(null); this.dataSource.data = []; this.visibleStudents.set([]);
     this.getStudents();
   }
 
@@ -240,21 +293,25 @@ export class Students implements OnInit {
     this.router.navigate(['/users']);
   }
 
-  applyFilter() {
-    this.dataSource.filter = JSON.stringify({ query: this.searchQuery.trim().toLowerCase(), status: this.statusFilter });
-    this.dataSource.paginator?.firstPage();
-  }
+  applyFilter(): void { if (!this.serverPaging) this.pageNumber = 1; this.refreshRows(); }
 
-  clearFilters(): void { this.searchQuery = ''; this.statusFilter = ''; this.applyFilter(); }
+  clearFilters(): void {
+    const hadSearch = !!this.searchQuery || !!this.appliedSearch;
+    this.searchQuery = ''; this.statusFilter = ''; this.pageNumber = 1;
+    if (this.serverPaging && hadSearch) { this.appliedSearch = ''; this.getStudents(); }
+    else this.refreshRows();
+  }
 
   openModal(): void {
     this.editingId.set(null);
-    this.originalExpiration = '';
+    this.originalExpiration = null;
     this.originalExpirationInput = '';
     this.subjectsNeedReview.set(false);
     this.editorError.set('');
     this.assignments.clear();
     this.studentForm.controls.expirationDate.clearValidators();
+    this.studentForm.controls.educationStageId.setValidators(this.uuidValidators);
+    this.studentForm.controls.educationStageId.updateValueAndValidity();
     this.studentForm.controls.subjectsReviewed.clearValidators();
     this.studentForm.reset({ status: 'Active', subjectIds: [] });
     this.studentForm.controls.userName.setValidators(Validators.required);
@@ -286,13 +343,15 @@ export class Students implements OnInit {
         this.subjectsNeedReview.set(!hasSubjectList);
         if (!hasSubjectList) this.studentForm.controls.subjectsReviewed.setValidators(Validators.requiredTrue);
         this.studentForm.controls.subjectsReviewed.updateValueAndValidity();
-        this.studentForm.controls.expirationDate.setValidators(Validators.required);
+        this.studentForm.controls.expirationDate.clearValidators();
+        this.studentForm.controls.educationStageId.setValidators(Validators.pattern(this.uuidPattern));
+        this.studentForm.controls.educationStageId.updateValueAndValidity();
         this.studentForm.controls.expirationDate.updateValueAndValidity();
         this.studentForm.controls.userName.clearValidators();
         this.studentForm.controls.password.clearValidators();
         this.studentForm.controls.userName.updateValueAndValidity();
         this.studentForm.controls.password.updateValueAndValidity();
-        this.originalExpiration = data.expirationDate ?? '';
+        this.originalExpiration = data.expirationDate ?? null;
         this.originalExpirationInput = data.expirationDate ? this.toLocalDateTime(data.expirationDate) : '';
         const assignments = data.teacherAssignments;
         const subjectIds: unknown[] = Array.isArray(data.subjectIds) ? data.subjectIds : Array.isArray(data.subjects) ? data.subjects.map((item: any) => item?.id) : assignments.map((item: any) => item.subjectId);
@@ -330,10 +389,10 @@ export class Students implements OnInit {
       fullName: value.fullName.trim(), phoneNumber: value.phoneNumber.trim(),
       parentName: value.parentName.trim(), parentPhoneNumber: value.parentPhoneNumber.trim(),
       curriculumId: value.curriculumId, gradeLevelId: value.gradeLevelId,
-      educationStageId: value.educationStageId, subjectIds, teacherAssignments: value.teacherAssignments
+      educationStageId: value.educationStageId || null, subjectIds, teacherAssignments: value.teacherAssignments
     };
     const id = this.editingId();
-    const payload = id ? { ...profile, status: value.status, expirationDate: value.expirationDate === this.originalExpirationInput ? this.originalExpiration : new Date(value.expirationDate).toISOString() } satisfies UpdateStudentPayload
+    const payload = id ? { ...profile, status: value.status, expirationDate: value.expirationDate === this.originalExpirationInput ? this.originalExpiration : value.expirationDate ? new Date(value.expirationDate).toISOString() : null } satisfies UpdateStudentPayload
       : { ...profile, userName: value.userName.trim(), password: value.password } satisfies CreateStudentPayload;
     const request = id ? this.user.updateStudent(id, payload as UpdateStudentPayload) : this.user.addStudents(payload as CreateStudentPayload);
     this.saving.set(true); this.editorError.set('');
@@ -414,7 +473,7 @@ export class Students implements OnInit {
    * تصدير بيانات الطلاب الحالية إلى ملف Excel/CSV متوافق مع اللغة العربية
    */
   exportToExcel() {
-    const list = this.dataSource.filteredData;
+    const list = this.visibleStudents();
 
     if (!list || list.length === 0) {
       alert('لا توجد بيانات طلاب للتصدير.');

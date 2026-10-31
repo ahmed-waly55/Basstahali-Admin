@@ -29,6 +29,11 @@
       <mat-icon matPrefix>search</mat-icon>
       <input matInput [ngModel]="searchText()" (ngModelChange)="searchText.set($event)" placeholder="اسم الطالب أو المعلم أو المادة">
     </mat-form-field>
+    <mat-form-field appearance="outline" class="search-filter">
+      <mat-label>رقم هاتف الطالب</mat-label>
+      <input matInput type="tel" dir="ltr" [ngModel]="phoneSearch()" (ngModelChange)="phoneSearch.set($event)" (keydown.enter)="searchByPhone()" [disabled]="saving() || !!deleting()" placeholder="رقم الهاتف المسجل">
+    </mat-form-field>
+    <button mat-stroked-button type="button" class="filter-button" [disabled]="loading() || saving() || !!deleting() || !phoneSearch().trim()" (click)="searchByPhone()"><mat-icon>search</mat-icon>بحث بالهاتف</button>
     <button mat-stroked-button type="button" class="filter-button" [disabled]="loading() || saving() || !!deleting()" (click)="showAll()">عرض كل المواعيد</button>
     <button mat-icon-button type="button" aria-label="تحديث المواعيد" matTooltip="تحديث المواعيد" [disabled]="loading() || saving() || !!deleting()" (click)="loadSchedules(!selectedStudentId)"><mat-icon>refresh</mat-icon></button>
   </section>

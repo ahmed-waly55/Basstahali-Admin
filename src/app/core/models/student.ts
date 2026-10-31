@@ -14,7 +14,7 @@ export interface StudentProfilePayload {
   curriculumId: string;
   subjectIds: string[];
   teacherAssignments: StudentAssignmentPayload[];
-  educationStageId: string;
+  educationStageId: string | null;
 }
 
 export interface CreateStudentPayload extends StudentProfilePayload {
@@ -23,7 +23,7 @@ export interface CreateStudentPayload extends StudentProfilePayload {
 }
 
 export interface UpdateStudentPayload extends StudentProfilePayload {
-  expirationDate: string;
+  expirationDate: string | null;
   status: string;
 }
 

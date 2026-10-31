@@ -119,21 +119,63 @@ describe('Student admin workflow', () => {
     expect(fixture.nativeElement.textContent).toContain('سجل محمّل');
   });
 
-  it('paginates loaded records and resets the page when filters change', async () => {
-    component.dataSource.data = Array.from({ length: 23 }, (_, index) => ({ ...student, id: String(index), fullName: `طالب ${String(index + 1).padStart(2, '0')}`, phoneNumber: index === 22 ? '012345' : '0100' })) as any;
-    fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(10);
-    component.dataSource.paginator!.nextPage(); fixture.detectChanges();
-    expect(component.dataSource.paginator!.pageIndex).toBe(1);
-    component.searchQuery = '012345'; component.applyFilter();
-    fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
-    expect(component.dataSource.paginator!.pageIndex).toBe(0);
-    expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(1);
-    expect(component.dataSource.filteredData[0].id).toBe('22');
-    component.clearFilters();
-    fixture.detectChanges(); await fixture.whenStable(); fixture.detectChanges();
-    expect(component.dataSource.filteredData).toHaveLength(23);
-    expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(10);
+  it('paginates a legacy loaded array without issuing extra network requests', async () => {
+    const rows=Array.from({length:23},(_,index)=>({...student,id:String(index),fullName:`طالب ${String(index+1).padStart(2,'0')}`,phoneNumber:index===22?'012345':'0100'}));
+    user.getStudents.mockReturnValueOnce(of({data:rows}));component.getStudents();fixture.detectChanges();await fixture.whenStable();fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(20);
+    const before=user.getStudents.mock.calls.length;component.changePage({pageNumber:2,pageSize:20});fixture.detectChanges();
+    expect(component.pageNumber).toBe(2);expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(3);expect(user.getStudents.mock.calls.length).toBe(before);
+    component.searchQuery='012345';component.searchStudents();fixture.detectChanges();
+    expect(component.pageNumber).toBe(1);expect(component.visibleStudents()).toHaveLength(1);expect(component.visibleStudents()[0].id).toBe('22');
+    component.clearFilters();fixture.detectChanges();expect(component.visibleStudents()).toHaveLength(20);
+  });
+
+  it('requests page2 for the21st server record and keeps the returned row visible', () => {
+    const first=Array.from({length:20},(_,index)=>({...student,id:String(index)}));
+    user.getStudents.mockReturnValueOnce(of({data:{items:first,pageNumber:1,pageSize:20,totalCount:21,totalPages:2,hasNextPage:true,hasPreviousPage:false}}));component.getStudents();fixture.detectChanges();
+    expect(component.totalCount).toBe(21);expect(component.visibleStudents()).toHaveLength(20);
+    user.getStudents.mockReturnValueOnce(of({data:{items:[{...student,id:'21'}],pageNumber:2,pageSize:20,totalCount:21,totalPages:2,hasNextPage:false,hasPreviousPage:true}}));
+    component.changePage({pageNumber:2,pageSize:20});fixture.detectChanges();
+    expect(user.getStudents).toHaveBeenLastCalledWith({PageNumber:2,PageSize:20});expect(component.visibleStudents().map(item=>item.id)).toEqual(['21']);expect(fixture.nativeElement.querySelectorAll('tr.mat-mdc-row')).toHaveLength(1);
+  });
+
+  it('debounces server search and resets paging to1 before sending Search', async () => {
+    user.getStudents.mockReturnValue(of({data:{items:[student],pageNumber:1,pageSize:20,totalCount:21,totalPages:2,hasNextPage:true}}));component.getStudents();
+    component.pageNumber=2;component.searchQuery='  بحث أول  ';component.searchStudents();component.searchQuery='  بحث نهائي  ';component.searchStudents();
+    await vi.waitFor(()=>expect(user.getStudents).toHaveBeenLastCalledWith({PageNumber:1,PageSize:20,Search:'بحث نهائي'}));
+    expect(component.pageNumber).toBe(1);
+  });
+
+  it('ignores stale pages and retries a failed target page without claiming old rows belong to it', () => {
+    const old=new Subject<any>();user.getStudents.mockReturnValueOnce(old);component.getStudents();
+    user.getStudents.mockReturnValueOnce(of({data:{items:[{...student,id:'new'}],pageNumber:1,pageSize:20,totalCount:21,totalPages:2,hasNextPage:true}}));component.getStudents();
+    old.next({data:{items:[{...student,id:'stale'}],pageNumber:1,pageSize:20,totalCount:99}});old.complete();expect(component.visibleStudents()[0].id).toBe('new');
+    user.getStudents.mockReturnValueOnce(throwError(()=>new Error('offline')));component.changePage({pageNumber:2,pageSize:20});expect(component.pageNumber).toBe(1);expect(component.errorMessage()).toContain('offline');
+    user.getStudents.mockReturnValueOnce(of({data:{items:[{...student,id:'21'}],pageNumber:2,pageSize:20,totalCount:21,totalPages:2,hasNextPage:false}}));component.retryStudents();expect(user.getStudents).toHaveBeenLastCalledWith({PageNumber:2,PageSize:20});expect(component.visibleStudents()[0].id).toBe('21');
+  });
+
+  it('does not show old rows or page totals after a different server search fails', async () => {
+    user.getStudents.mockReturnValueOnce(of({data:{items:[student],pageNumber:1,pageSize:20,totalCount:21,totalPages:2,hasNextPage:true}}));component.getStudents();
+    user.getStudents.mockReturnValueOnce(throwError(()=>new Error('offline')));component.searchQuery='بحث جديد';component.searchStudents();
+    await vi.waitFor(()=>expect(component.errorMessage()).toContain('offline'));
+    expect(component.visibleStudents()).toEqual([]);expect(component.totalCount).toBeNull();expect(component.hasNextPage).toBe(false);
+    user.getStudents.mockReturnValueOnce(of({data:{items:[{...student,id:'new'}],pageNumber:1,pageSize:20,totalCount:1,totalPages:1,hasNextPage:false}}));component.retryStudents();expect(user.getStudents).toHaveBeenLastCalledWith({PageNumber:1,PageSize:20,Search:'بحث جديد'});
+  });
+
+  it('cancels a queued search when filters are cleared before the debounce fires', async () => {
+    user.getStudents.mockReturnValue(of({data:{items:[student],pageNumber:1,pageSize:20,totalCount:1,totalPages:1,hasNextPage:false}}));component.getStudents();
+    component.searchQuery='قديم';component.searchStudents();component.clearFilters();
+    await new Promise(resolve=>setTimeout(resolve,350));expect(user.getStudents).toHaveBeenLastCalledWith({PageNumber:1,PageSize:20});expect(component.loading()).toBe(false);
+  });
+
+  it('recovers from an emptied last server page after a mutation', () => {
+    component.pageNumber=2;user.getStudents.mockReturnValueOnce(of({data:{items:[],pageNumber:2,pageSize:20,totalCount:20,totalPages:1,hasNextPage:false}})).mockReturnValueOnce(of({data:{items:[student],pageNumber:1,pageSize:20,totalCount:20,totalPages:1,hasNextPage:false}}));
+    component.getStudents();expect(component.pageNumber).toBe(1);expect(user.getStudents).toHaveBeenLastCalledWith({PageNumber:1,PageSize:20});expect(component.visibleStudents()).toHaveLength(1);
+  });
+
+  it('preserves the nullable stage and expiry returned by the API on a profile-only edit',()=>{
+    user.getStudentById.mockReturnValueOnce(of({data:{...student,educationStageId:null,expirationDate:null}}));component.openEdit(student as any);component.studentForm.controls.fullName.setValue('تعديل الاسم');component.saveStudent();
+    const body=user.updateStudent.mock.calls[0][1];expect(body.expirationDate).toBeNull();expect(body.educationStageId).toBeNull();
   });
 
   it('distinguishes an empty loaded list from unmatched filters and clears filters for the archive', () => {

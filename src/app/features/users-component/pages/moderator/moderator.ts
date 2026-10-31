@@ -1,11 +1,15 @@
+import { A11yModule } from '@angular/cdk/a11y';
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged, map, Subject } from 'rxjs';
+import { DirectoryPageChange, parseDirectoryPage } from '../../../../core/models/directory-page';
+import { DirectoryPaginator } from '../../../../shared/components/directory-paginator/directory-paginator';
 import { MatTableDataSource } from '@angular/material/table';
 import Swal from 'sweetalert2';
 import { CreateModeratorRequest, ModeratorRecord, UpdateModeratorRequest } from '../../../../core/models/account';
@@ -14,7 +18,7 @@ import { Account } from '../../../../core/services/account';
 @Component({
   selector: 'app-moderator',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, MatPaginatorModule, MatFormFieldModule,
+  imports: [CommonModule, A11yModule, FormsModule, ReactiveFormsModule, DirectoryPaginator, MatFormFieldModule,
     MatInputModule, MatButtonModule, MatIconModule],
   templateUrl: './moderator.html',
   styleUrl: './moderator.css',
@@ -22,6 +26,10 @@ import { Account } from '../../../../core/services/account';
 export class Moderator implements OnInit {
   private fb = inject(FormBuilder);
   private moderatorService = inject(Account);
+  private cdr = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
+  private searchChanges = new Subject<string>();
+  private requestVersion = 0;
 
   isAddModalOpen = false;
   isEditModalOpen = false;
@@ -31,8 +39,16 @@ export class Moderator implements OnInit {
   deletingModeratorId: string | null = null;
   loadError = '';
   currentModeratorId: string | null = null;
-  pageIndex = 0;
-  pageSize = 5;
+  pageNumber = 1;
+  pageSize = 20;
+  totalCount: number | null = null;
+  totalPages: number | null = null;
+  hasPreviousPage = false;
+  hasNextPage = false;
+  serverPaged = true;
+  searchTerm = '';
+  private appliedSearch = '';
+  private requestedSearch = '';
   dataSource = new MatTableDataSource<ModeratorRecord>([]);
 
   addForm = this.fb.nonNullable.group({
@@ -53,39 +69,101 @@ export class Moderator implements OnInit {
     salaryCurrency: ['', Validators.required],
   });
 
-  get visibleModerators(): ModeratorRecord[] {
-    const start = this.pageIndex * this.pageSize;
-    return this.dataSource.data.slice(start, start + this.pageSize);
+  get filteredModerators(): ModeratorRecord[] {
+    if (this.serverPaged || !this.appliedSearch) return this.dataSource.data;
+    const query = this.appliedSearch.toLocaleLowerCase();
+    return this.dataSource.data.filter(row => [row.fullName, row.userName, row.phoneNumber].join(' ').toLocaleLowerCase().includes(query));
   }
 
+  get visibleModerators(): ModeratorRecord[] {
+    if (this.serverPaged) return this.dataSource.data;
+    return this.filteredModerators.slice((this.pageNumber - 1) * this.pageSize, this.pageNumber * this.pageSize);
+  }
+  get paginatorCount(): number | null { return this.serverPaged ? this.totalCount : this.filteredModerators.length; }
+  get paginatorPages(): number | null { return this.serverPaged ? this.totalPages : Math.ceil(this.filteredModerators.length / this.pageSize); }
+  get canPrevious(): boolean { return this.serverPaged ? this.hasPreviousPage : this.pageNumber > 1; }
+  get canNext(): boolean { return this.serverPaged ? this.hasNextPage : this.pageNumber < (this.paginatorPages ?? 0); }
+
   ngOnInit(): void {
+    this.searchChanges.pipe(debounceTime(300), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe(query => {
+      this.appliedSearch = query;
+      this.pageNumber = 1;
+      if (this.serverPaged) this.loadModerators();
+      else this.cdr.markForCheck();
+    });
     this.loadModerators();
   }
 
-  changePage(event: PageEvent): void {
-    this.pageIndex = event.pageIndex;
+  search(value: string): void {
+    this.searchTerm = value;
+    const query = value.trim();
+    if (query === this.requestedSearch) return;
+    this.requestedSearch = query;
+    this.requestVersion++;
+    if (this.serverPaged) {
+      this.pageNumber = 1;
+      this.isLoading = true;
+      this.clearDisplayedDirectory();
+    }
+    this.searchChanges.next(query);
+  }
+
+  changePage(event: DirectoryPageChange): void {
+    if (this.isSaving || this.deletingModeratorId || this.isLoading) return;
+    const sizeChanged = event.pageSize !== this.pageSize;
     this.pageSize = event.pageSize;
+    this.pageNumber = sizeChanged ? 1 : event.pageNumber;
+    if (this.serverPaged) this.loadModerators();
   }
 
   loadModerators(): void {
+    const version = ++this.requestVersion;
+    const requestedPage = this.pageNumber;
+    const requestedSize = this.pageSize;
     this.isLoading = true;
     this.loadError = '';
-    this.moderatorService.getModerators().subscribe({
-      next: (res) => {
-        const rows = Array.isArray(res) ? res : (res?.data?.items ?? res?.data ?? res?.items);
-        if (res?.success === false || !Array.isArray(rows)) {
-          this.loadError = res?.message || 'تعذر تحميل قائمة المشرفين. حاول مرة أخرى.';
-        } else {
-          this.dataSource.data = rows.map(item => ({ ...item, id: item.id || item._id }));
-          this.pageIndex = Math.min(this.pageIndex, Math.max(0, Math.ceil(rows.length / this.pageSize) - 1));
+    this.clearDisplayedDirectory();
+    this.moderatorService.getModerators({ PageNumber: requestedPage, PageSize: requestedSize, ...(this.appliedSearch ? { Search: this.appliedSearch } : {}) }).pipe(
+      map(response => parseDirectoryPage<ModeratorRecord>(response, requestedPage, requestedSize)),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: page => {
+        if (version !== this.requestVersion) return;
+        this.isLoading = false;
+        this.serverPaged = page.serverPaged;
+        this.pageNumber = page.pageNumber;
+        this.pageSize = page.pageSize;
+        this.totalCount = page.totalCount;
+        this.totalPages = page.totalPages;
+        this.hasPreviousPage = page.hasPreviousPage;
+        this.hasNextPage = page.hasNextPage;
+        const lastPage = this.serverPaged && page.totalPages !== null ? Math.max(1, page.totalPages) : null;
+        if (lastPage !== null && requestedPage > lastPage) {
+          this.pageNumber = lastPage;
+          this.loadModerators();
+          return;
         }
-        this.isLoading = false;
+        this.dataSource.data = page.items.map(row => ({ ...row, id: row.id || (row as any)._id }));
+        if (!this.serverPaged) this.pageNumber = Math.min(this.pageNumber, Math.max(1, Math.ceil(this.filteredModerators.length / this.pageSize)));
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: error => {
+        if (version !== this.requestVersion) return;
         this.isLoading = false;
-        this.loadError = 'تعذر تحميل قائمة المشرفين. تحقق من الاتصال وحاول مرة أخرى.';
+        this.loadError = 'تعذر تحميل قائمة المشرفين. ' + (error?.error?.message || error?.message || 'تحقق من الاتصال وحاول مرة أخرى.');
+        this.cdr.markForCheck();
       },
     });
+  }
+
+  // Old rows and totals belong to the last successful query, not a pending page/search.
+  // Keep the requested page/size/search for retry, but never relabel old records with them.
+  private clearDisplayedDirectory(): void {
+    this.dataSource.data = [];
+    this.totalCount = null;
+    this.totalPages = null;
+    this.hasPreviousPage = this.pageNumber > 1;
+    this.hasNextPage = false;
   }
 
   openAddModal(): void {
@@ -129,6 +207,7 @@ export class Moderator implements OnInit {
     this.moderatorService.createModerator(payload).subscribe({
       next: (res) => {
         this.isSaving = false;
+        this.cdr.markForCheck();
         if (res?.success === false) {
           this.showError(res?.message || 'فشل في إضافة المشرف');
           return;
@@ -139,6 +218,7 @@ export class Moderator implements OnInit {
       },
       error: (err) => {
         this.isSaving = false;
+        this.cdr.markForCheck();
         this.showError(err?.error?.message || 'فشل في إضافة المشرف. لم يتم حفظ البيانات.');
       },
     });
@@ -155,6 +235,7 @@ export class Moderator implements OnInit {
     this.moderatorService.updateModerator(this.currentModeratorId, payload).subscribe({
       next: (res) => {
         this.isSaving = false;
+        this.cdr.markForCheck();
         if (res?.success === false) {
           this.showError(res?.message || 'فشل في تحديث بيانات المشرف');
           return;
@@ -165,6 +246,7 @@ export class Moderator implements OnInit {
       },
       error: (err) => {
         this.isSaving = false;
+        this.cdr.markForCheck();
         this.showError(err?.error?.message || 'فشل في تحديث بيانات المشرف. لم يتم حفظ التغييرات.');
       },
     });
@@ -186,6 +268,7 @@ export class Moderator implements OnInit {
       this.moderatorService.deleteModerator(id).subscribe({
         next: (res) => {
           this.deletingModeratorId = null;
+          this.cdr.markForCheck();
           if (res?.success === false) {
             this.showError(res?.message || 'فشل في حذف المشرف');
             return;
@@ -195,6 +278,7 @@ export class Moderator implements OnInit {
         },
         error: (err) => {
           this.deletingModeratorId = null;
+          this.cdr.markForCheck();
           this.showError(err?.error?.message || 'فشل في حذف المشرف. لم يتم تغيير القائمة.');
         },
       });

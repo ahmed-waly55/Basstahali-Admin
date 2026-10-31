@@ -24,16 +24,25 @@ describe('StudentSchedulesService', () => {
   });
   afterEach(() => http.verify());
 
-  it('uses the documented reads without guessed search parameters', () => {
-    service.search().subscribe();
+  it('uses the actual collection endpoint for all schedules', () => {
+    service.all().subscribe();
     service.forStudent('student-1').subscribe();
     service.options('student-1').subscribe();
-    for (const path of ['/search', '/students/student-1', '/students/student-1/options']) {
+    for (const path of ['', '/students/student-1', '/students/student-1/options']) {
       const request = http.expectOne(url + path);
       expect(request.request.method).toBe('GET');
       expect(request.request.params.keys()).toEqual([]);
       request.flush({ success: true, data: [] });
     }
+  });
+
+  it('sends an encoded phoneNumber only when searching by student phone', () => {
+    service.search('  +201000000000  ').subscribe();
+    const request = http.expectOne(item => item.url === `${url}/search`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.params.keys()).toEqual(['phoneNumber']);
+    expect(request.request.params.get('phoneNumber')).toBe('+201000000000');
+    request.flush({ success: true, data: [] });
   });
 
   it('sends single and batch bodies to their documented endpoints', () => {

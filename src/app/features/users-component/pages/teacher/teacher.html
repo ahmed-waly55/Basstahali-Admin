@@ -1,9 +1,9 @@
-<div class="p-4 md:p-6 max-w-7xl mx-auto font-sans" dir="rtl">
+<div class="teacher-workspace" dir="rtl">
 
   <!-- رأس الصفحة -->
-  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 bg-white p-6 rounded-3xl shadow-sm border border-slate-200/80">
+  <div class="teacher-page-header">
     <div>
-      <h1 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">إدارة المدرسين</h1>
+      <h1 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">المعلمون</h1>
       <p class="text-xs md:text-sm text-slate-500 mt-1">متابعة المدرسين وإدارة الحسابات المؤرشفة والمحذوفة مع خيارات الاسترجاع</p>
     </div>
 
@@ -24,7 +24,7 @@
             <mat-icon class="!text-indigo-600">groups</mat-icon>
             <span class="font-bold">المدرسين الحاليين</span>
             <span class="bg-indigo-50 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-black">
-              {{ dataSource.data.length }}
+              {{ activePage.totalCount ?? '—' }}
             </span>
           </div>
         </ng-template>
@@ -33,13 +33,15 @@
         <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
           <mat-form-field appearance="outline" class="w-full md:w-80 !mb-0 search-field" subscriptSizing="dynamic">
             <mat-icon matPrefix class="text-slate-400">search</mat-icon>
-            <input matInput (keyup)="applyFilter($event)" placeholder="بحث بالاسم أو الهاتف...">
+            <input matInput [value]="activeSearch" (input)="applyFilter($event)" aria-label="البحث عن معلم" placeholder="بحث بالاسم أو الهاتف...">
           </mat-form-field>
         </div>
 
+        @if (activeLoadError) { <div class="directory-error" role="alert">{{ activeLoadError }} <button mat-button (click)="loadTeachers()" [disabled]="isLoading">إعادة المحاولة</button></div> }
+        @if (isLoading) { <p class="directory-loading" role="status">جارٍ تحميل المعلمين…</p> }
         <!-- جدول المدرسين الحاليين -->
         <div class="overflow-x-auto w-full">
-          <table mat-table [dataSource]="dataSource" matSort #activeSort="matSort" class="w-full text-right">
+          <table mat-table [dataSource]="dataSource" matSort #activeSort="matSort" [matSortDisabled]="activePage.serverPaged" class="w-full text-right">
 
             <!-- الاسم -->
             <ng-container matColumnDef="fullName">
@@ -79,7 +81,7 @@
                     'bg-amber-500': element.status === 'Inactive',
                     'bg-rose-500': element.status === 'Suspended'
                   }"></span>
-                  {{ element.status === 'Active' ? 'نشط' : (element.status === 'Inactive' ? 'غير نشط' : 'موقوف') }}
+                  {{ element.status === 'Active' ? 'نشط' : (element.status === 'Inactive' ? 'غير نشط' : element.status === 'Suspended' ? 'موقوف' : (element.status || 'غير محددة')) }}
                 </span>
               </td>
             </ng-container>
@@ -112,13 +114,13 @@
             <tr class="mat-row" *matNoDataRow>
               <td [attr.colspan]="displayedColumns.length" class="text-center py-12 text-slate-400">
                 <mat-icon class="!w-12 !h-12 !text-4xl block mx-auto mb-2 text-slate-300">search_off</mat-icon>
-                <p class="font-bold text-sm">لا توجد سجلات تطابق البحث أو القائمة فارغة</p>
+                @if (!isLoading && !activeLoadError) { <p class="font-bold text-sm">لا توجد سجلات تطابق البحث أو القائمة فارغة</p> }
               </td>
             </tr>
           </table>
         </div>
 
-        <mat-paginator #activePaginator [pageSizeOptions]="[5, 10, 25]" showFirstLastButtons class="!bg-transparent border-t border-slate-100"></mat-paginator>
+        <app-directory-paginator [pageNumber]="activePage.pageNumber" [pageSize]="activePage.pageSize" [totalCount]="activePage.totalCount" [totalPages]="activePage.totalPages" [hasPreviousPage]="activePage.hasPreviousPage" [hasNextPage]="activePage.hasNextPage" [disabled]="isLoading" [itemCount]="dataSource.data.length" [localMode]="!activePage.serverPaged" (pageChange)="changePage($event)" />
       </mat-tab>
 
       <!-- ================= التاب 2: الحسابات المحذوفة (المؤرشفة) ================= -->
@@ -128,7 +130,7 @@
             <mat-icon class="!text-rose-500">archive</mat-icon>
             <span class="font-bold">الحسابات المحذوفة (المؤرشفة)</span>
             <span class="bg-rose-50 text-rose-600 text-xs px-2.5 py-0.5 rounded-full font-black">
-              {{ archivedDataSource.data.length }}
+              {{ archivedPage.totalCount ?? '—' }}
             </span>
           </div>
         </ng-template>
@@ -137,13 +139,15 @@
         <div class="p-4 border-b border-slate-100 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
           <mat-form-field appearance="outline" class="w-full md:w-80 !mb-0 search-field" subscriptSizing="dynamic">
             <mat-icon matPrefix class="text-slate-400">search</mat-icon>
-            <input matInput (keyup)="applyFilter($event, true)" placeholder="بحث في الحسابات المؤرشفة...">
+            <input matInput [value]="archivedSearch" (input)="applyFilter($event, true)" aria-label="البحث في المعلمين المؤرشفين" placeholder="بحث في الحسابات المؤرشفة...">
           </mat-form-field>
         </div>
 
+        @if (archivedLoadError) { <div class="directory-error" role="alert">{{ archivedLoadError }} <button mat-button (click)="loadArchivedTeachers()" [disabled]="isDeletedLoading">إعادة المحاولة</button></div> }
+        @if (isDeletedLoading) { <p class="directory-loading" role="status">جارٍ تحميل الأرشيف…</p> }
         <!-- جدول المدرسين المحذوفين -->
         <div class="overflow-x-auto w-full">
-          <table mat-table [dataSource]="archivedDataSource" matSort #archivedSort="matSort" class="w-full text-right">
+          <table mat-table [dataSource]="archivedDataSource" matSort #archivedSort="matSort" [matSortDisabled]="archivedPage.serverPaged" class="w-full text-right">
 
             <!-- الاسم -->
             <ng-container matColumnDef="fullName">
@@ -198,13 +202,13 @@
             <tr class="mat-row" *matNoDataRow>
               <td [attr.colspan]="archivedDisplayedColumns.length" class="text-center py-12 text-slate-400">
                 <mat-icon class="!w-12 !h-12 !text-4xl block mx-auto mb-2 text-slate-300">inventory_2</mat-icon>
-                <p class="font-bold text-sm">سلة المحذوفات فارغة، لا يوجد مدرسين مؤرشفين</p>
+                @if (!isDeletedLoading && !archivedLoadError) { <p class="font-bold text-sm">الأرشيف فارغ، لا يوجد معلمون مؤرشفون</p> }
               </td>
             </tr>
           </table>
         </div>
 
-        <mat-paginator #archivedPaginator [pageSizeOptions]="[5, 10, 25]" showFirstLastButtons class="!bg-transparent border-t border-slate-100"></mat-paginator>
+        <app-directory-paginator [pageNumber]="archivedPage.pageNumber" [pageSize]="archivedPage.pageSize" [totalCount]="archivedPage.totalCount" [totalPages]="archivedPage.totalPages" [hasPreviousPage]="archivedPage.hasPreviousPage" [hasNextPage]="archivedPage.hasNextPage" [disabled]="isDeletedLoading" [itemCount]="archivedDataSource.data.length" [localMode]="!archivedPage.serverPaged" (pageChange)="changePage($event,true)" />
       </mat-tab>
 
     </mat-tab-group>

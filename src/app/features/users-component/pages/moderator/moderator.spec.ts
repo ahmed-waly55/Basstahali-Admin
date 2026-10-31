@@ -19,7 +19,7 @@ describe('Moderator admin integration', () => {
     deleteModerator: ReturnType<typeof vi.fn>;
   };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     account = {
       getModerators: vi.fn().mockReturnValue(of({ success: true, data: [moderator] })),
       createModerator: vi.fn().mockReturnValue(of({ success: true })),
@@ -27,11 +27,12 @@ describe('Moderator admin integration', () => {
       deleteModerator: vi.fn().mockReturnValue(of({ success: true })),
     };
     TestBed.configureTestingModule({ imports: [Moderator], providers: [{ provide: Account, useValue: account }] });
-    component = TestBed.runInInjectionContext(() => new Moderator());
+    await TestBed.compileComponents();
+    component = TestBed.createComponent(Moderator).componentInstance;
     vi.spyOn(Swal, 'fire').mockResolvedValue({ isConfirmed: false, isDenied: false, isDismissed: true });
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); });
 
   it('renders the documented salary and status fields and omits credentials from editing', async () => {
     await TestBed.compileComponents();
@@ -132,4 +133,109 @@ describe('Moderator admin integration', () => {
     await Promise.resolve();
     expect(account.deleteModerator).not.toHaveBeenCalled();
   });
+  function serverPage(items: ModeratorRecord[], pageNumber: number, totalCount: number) {
+    const pageSize = 20;
+    return { success: true, data: { items, pageNumber, pageSize, totalCount, totalPages: Math.ceil(totalCount / pageSize), hasPreviousPage: pageNumber > 1, hasNextPage: pageNumber < Math.ceil(totalCount / pageSize) } };
+  }
+
+  it('requests the second server page to show the 21st moderator without slicing it again', () => {
+    const first = Array.from({ length: 20 }, (_, index) => ({ ...moderator, id: `m-${index}` }));
+    const last = { ...moderator, id: 'm-21', fullName: 'المشرف الأخير' };
+    account.getModerators.mockReturnValueOnce(of(serverPage(first, 1, 21))).mockReturnValueOnce(of(serverPage([last], 2, 21)));
+    component.loadModerators();
+    expect(component.totalCount).toBe(21); expect(component.visibleModerators).toHaveLength(20);
+    component.changePage({ pageNumber: 2, pageSize: 20 });
+    expect(account.getModerators).toHaveBeenLastCalledWith({ PageNumber: 2, PageSize: 20 });
+    expect(component.visibleModerators).toEqual([last]); expect(component.canNext).toBe(false);
+  });
+
+  it('resets the server page after changing page size and searching', () => {
+    vi.useFakeTimers();
+    account.getModerators.mockReturnValue(of(serverPage([moderator], 2, 41)));
+    component.ngOnInit(); component.pageNumber = 2;
+    component.changePage({ pageNumber: 2, pageSize: 50 });
+    expect(account.getModerators).toHaveBeenLastCalledWith({ PageNumber: 1, PageSize: 50 });
+    component.pageSize = 20;
+    component.search('  مشرف & أحمد  '); vi.advanceTimersByTime(300);
+    expect(account.getModerators).toHaveBeenLastCalledWith({ PageNumber: 1, PageSize: 20, Search: 'مشرف & أحمد' });
+  });
+
+  it('does not invent an overall total when the server omits it', () => {
+    account.getModerators.mockReturnValue(of({ data: { items: [moderator], pageNumber: 1, pageSize: 20, hasNextPage: true } }));
+    component.loadModerators(); expect(component.paginatorCount).toBeNull(); expect(component.canNext).toBe(true);
+  });
+
+  it('ignores an older page response that arrives after the latest request', () => {
+    const first = new Subject<any>(); const second = new Subject<any>();
+    account.getModerators.mockReturnValueOnce(first).mockReturnValueOnce(second);
+    component.loadModerators(); component.pageNumber = 2; component.loadModerators();
+    second.next(serverPage([{ ...moderator, id: 'fresh' }], 2, 21));
+    first.next(serverPage([{ ...moderator, id: 'stale' }], 1, 21));
+    expect(component.visibleModerators[0].id).toBe('fresh'); expect(component.pageNumber).toBe(2);
+  });
+
+  it('returns to the last existing server page after deleting its only remaining row', async () => {
+    vi.mocked(Swal.fire).mockResolvedValue({ isConfirmed: true, isDenied: false, isDismissed: false });
+    component.pageNumber = 2;
+    account.getModerators.mockReturnValueOnce(of(serverPage([], 2, 20))).mockReturnValueOnce(of(serverPage([moderator], 1, 20)));
+    component.deleteModerator(moderator.id); await Promise.resolve();
+    expect(account.getModerators.mock.calls.map(call => call[0].PageNumber)).toEqual([2, 1]);
+    expect(component.pageNumber).toBe(1); expect(component.visibleModerators).toEqual([moderator]);
+  });
+
+  it('does not invalidate an in-flight search when only surrounding spaces change', () => {
+    vi.useFakeTimers(); const pending = new Subject<any>();
+    account.getModerators.mockReturnValue(pending); component.ngOnInit();
+    component.search('مشرف'); vi.advanceTimersByTime(300); component.search('  مشرف  ');
+    pending.next(serverPage([moderator], 1, 1));
+    expect(component.isLoading).toBe(false); expect(component.visibleModerators).toEqual([moderator]);
+    expect(account.getModerators).toHaveBeenCalledTimes(2);
+  });
+
+  it('never labels the previous twenty moderators as page2 when that page fails, and retries page2', () => {
+    const first = Array.from({length:20}, (_,index) => ({...moderator,id:`moderator-${index}`}));
+    account.getModerators.mockReturnValueOnce(of(serverPage(first,1,21)));
+    component.loadModerators();
+    account.getModerators.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.changePage({pageNumber:2,pageSize:20});
+    expect(component.visibleModerators).toEqual([]);
+    expect(component.pageNumber).toBe(2);
+    expect(component.totalCount).toBeNull(); expect(component.totalPages).toBeNull();
+    expect(component.canNext).toBe(false); expect(component.loadError).toContain('offline');
+    const last={...moderator,id:'moderator-21'};
+    account.getModerators.mockReturnValueOnce(of(serverPage([last],2,21)));
+    component.loadModerators();
+    expect(account.getModerators).toHaveBeenLastCalledWith({PageNumber:2,PageSize:20});
+    expect(component.visibleModerators).toEqual([last]); expect(component.totalCount).toBe(21);
+  });
+
+  it('clears old records/totals immediately for a new server search and retries the failed search on page1', () => {
+    vi.useFakeTimers();
+    account.getModerators.mockReturnValueOnce(of(serverPage([{...moderator,id:'old'}],2,21)));
+    component.ngOnInit();
+    account.getModerators.mockReturnValueOnce(throwError(() => new Error('search failed')));
+    component.search('  بحث جديد  ');
+    expect(component.isLoading).toBe(true); expect(component.visibleModerators).toEqual([]);
+    expect(component.totalCount).toBeNull(); expect(component.pageNumber).toBe(1);
+    component.changePage({pageNumber:2,pageSize:20});
+    vi.advanceTimersByTime(300);
+    expect(component.loadError).toContain('search failed'); expect(component.visibleModerators).toEqual([]);
+    expect(component.canNext).toBe(false); expect(component.totalCount).toBeNull();
+    account.getModerators.mockReturnValueOnce(of(serverPage([{...moderator,id:'matching'}],1,1)));
+    component.loadModerators();
+    expect(account.getModerators).toHaveBeenLastCalledWith({PageNumber:1,PageSize:20,Search:'بحث جديد'});
+    expect(component.visibleModerators[0].id).toBe('matching'); expect(component.totalCount).toBe(1);
+  });
+
+  it('does not retain old totals or rows when a page-size change fails', () => {
+    account.getModerators.mockReturnValueOnce(of(serverPage([{...moderator,id:'old'}],2,21)));
+    component.loadModerators();
+    account.getModerators.mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.changePage({pageNumber:2,pageSize:50});
+    expect(component.pageNumber).toBe(1); expect(component.pageSize).toBe(50);
+    expect(component.visibleModerators).toEqual([]); expect(component.totalCount).toBeNull();
+    account.getModerators.mockReturnValueOnce(of({data:{items:[moderator],pageNumber:1,pageSize:50,totalCount:1}}));
+    component.loadModerators();expect(account.getModerators).toHaveBeenLastCalledWith({PageNumber:1,PageSize:50});
+  });
+
 });

@@ -1,3 +1,5 @@
+import { DirectoryQuery } from '../models/directory-page';
+import { directoryParams } from './directory-query';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -22,9 +24,9 @@ export class User {
     return this._HttpClient.post(`${environment.baseUrl}/api/v1/students`, body, { headers });
   }
 
-  getStudents(): Observable<any> {
+  getStudents(query?: DirectoryQuery): Observable<any> {
     const headers = this.getHeaders();
-    return this._HttpClient.get(`${environment.baseUrl}/api/v1/students`, { headers });
+    return this._HttpClient.get(`${environment.baseUrl}/api/v1/students`, { headers, ...(query ? { params: directoryParams(query) } : {}) });
   }
 
   getStudentById(id: string): Observable<any> {
@@ -39,8 +41,8 @@ export class User {
     return this._HttpClient.delete(`${environment.baseUrl}/api/v1/students/${encodeURIComponent(id)}`, { headers: this.getHeaders() });
   }
 
-  getArchivedStudents(): Observable<any> {
-    return this._HttpClient.get(`${environment.baseUrl}/api/v1/archived-records/students`, { headers: this.getHeaders() });
+  getArchivedStudents(query?: DirectoryQuery): Observable<any> {
+    return this._HttpClient.get(`${environment.baseUrl}/api/v1/archived-records/students`, { headers: this.getHeaders(), ...(query ? { params: directoryParams(query) } : {}) });
   }
 
   restoreStudent(id: string): Observable<any> {

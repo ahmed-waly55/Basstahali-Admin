@@ -1,11 +1,11 @@
-<section class="p-4 md:p-6 max-w-7xl mx-auto" dir="rtl" aria-labelledby="moderators-title">
-  <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4 bg-white p-6 rounded-3xl border border-slate-200/80">
+<section class="moderator-workspace" dir="rtl" aria-labelledby="moderators-title">
+  <div class="directory-heading">
     <div>
       <h1 id="moderators-title" class="text-2xl font-black text-slate-900">إدارة المشرفين</h1>
       <p class="text-sm text-slate-500 mt-2">تابع فريق بسطهالي وحدّث بيانات المشرفين ورواتبهم</p>
     </div>
     <button type="button" (click)="openAddModal()" [disabled]="isSaving || !!deletingModeratorId"
-      class="bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white font-bold px-5 py-3 rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer">
+      class="brand-button">
       <i class="fa-solid fa-user-plus" aria-hidden="true"></i> إضافة مشرف
     </button>
   </div>
@@ -17,15 +17,16 @@
     </div>
   }
 
-  <div class="bg-white rounded-3xl border border-slate-200/80 overflow-hidden" [attr.aria-busy]="isLoading">
+  <div class="directory-panel" [attr.aria-busy]="isLoading">
     <div class="p-6 border-b border-slate-100 flex justify-between items-center gap-3">
       <h2 class="font-black text-lg text-slate-900">قائمة المشرفين</h2>
-      <span class="text-xs bg-purple-50 text-purple-700 font-bold px-3 py-2 rounded-xl">الإجمالي: {{ dataSource.data.length }}</span>
+      <span class="directory-count">{{ serverPaged ? (totalCount !== null ? 'الإجمالي: ' + totalCount : 'الإجمالي غير متاح') : 'السجلات المحمّلة: ' + dataSource.data.length }}</span>
     </div>
+    <div class="directory-toolbar"><label><mat-icon aria-hidden="true">search</mat-icon><input type="search" aria-label="البحث عن مشرف" placeholder="ابحث باسم المشرف أو الهاتف..." [ngModel]="searchTerm" (ngModelChange)="search($event)" [disabled]="isSaving || !!deletingModeratorId" /></label><button mat-icon-button type="button" aria-label="تحديث قائمة المشرفين" (click)="loadModerators()" [disabled]="isLoading || isSaving || !!deletingModeratorId"><mat-icon>refresh</mat-icon></button></div>
     @if (isLoading) {
       <p role="status" class="p-4 text-center text-purple-700">جارٍ تحميل المشرفين…</p>
     }
-    <div class="overflow-x-auto">
+    <div class="overflow-x-auto" [class.directory-muted]="isLoading || !!loadError">
       <table class="w-full text-right border-collapse">
         <thead>
           <tr class="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold text-xs">
@@ -61,19 +62,18 @@
             </tr>
           } @empty {
             @if (!isLoading && !loadError) {
-              <tr><td colspan="5" class="text-center py-12 text-slate-500">لا يوجد مشرفون حتى الآن. أضف أول مشرف لفريقك.</td></tr>
+              <tr><td colspan="5" class="text-center py-12 text-slate-500">{{ searchTerm ? 'لا توجد نتائج مطابقة للبحث.' : 'لا يوجد مشرفون حتى الآن. أضف أول مشرف لفريقك.' }}</td></tr>
             }
           }
         </tbody>
       </table>
     </div>
-    <mat-paginator [length]="dataSource.data.length" [pageIndex]="pageIndex" [pageSize]="pageSize"
-      [pageSizeOptions]="[5, 10, 20]" (page)="changePage($event)" showFirstLastButtons aria-label="صفحات المشرفين"></mat-paginator>
+    <app-directory-paginator [pageNumber]="pageNumber" [pageSize]="pageSize" [totalCount]="paginatorCount" [totalPages]="paginatorPages" [hasPreviousPage]="canPrevious" [hasNextPage]="canNext" [disabled]="isLoading || isSaving || !!deletingModeratorId" [itemCount]="visibleModerators.length" [localMode]="!serverPaged" (pageChange)="changePage($event)"></app-directory-paginator>
   </div>
 
   @if (isAddModalOpen) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div role="dialog" aria-modal="true" aria-labelledby="add-moderator-title" class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="moderator-backdrop">
+      <div role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="closeAddModal()" aria-labelledby="add-moderator-title" class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-6 gap-3">
           <h2 id="add-moderator-title" class="text-xl font-black text-slate-900">إضافة مشرف جديد</h2>
           <button type="button" (click)="closeAddModal()" [disabled]="isSaving" aria-label="إغلاق" class="p-2 cursor-pointer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
@@ -116,7 +116,7 @@
           </div>
           <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" (click)="closeAddModal()" [disabled]="isSaving" class="px-5 py-3 text-sm font-bold text-slate-600 rounded-2xl cursor-pointer">إلغاء</button>
-            <button type="submit" [disabled]="addForm.invalid || isSaving" class="px-6 py-3 text-sm font-bold bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white rounded-2xl cursor-pointer">
+            <button type="submit" [disabled]="addForm.invalid || isSaving" class="brand-button disabled:opacity-50">
               {{ isSaving ? 'جارٍ الحفظ…' : 'حفظ المشرف' }}
             </button>
           </div>
@@ -126,8 +126,8 @@
   }
 
   @if (isEditModalOpen) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div role="dialog" aria-modal="true" aria-labelledby="edit-moderator-title" class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div class="moderator-backdrop">
+      <div role="dialog" aria-modal="true" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="closeEditModal()" aria-labelledby="edit-moderator-title" class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-6 gap-3">
           <h2 id="edit-moderator-title" class="text-xl font-black text-slate-900">تعديل بيانات المشرف</h2>
           <button type="button" (click)="closeEditModal()" [disabled]="isSaving" aria-label="إغلاق" class="p-2 cursor-pointer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
@@ -162,7 +162,7 @@
           </div>
           <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
             <button type="button" (click)="closeEditModal()" [disabled]="isSaving" class="px-5 py-3 text-sm font-bold text-slate-600 rounded-2xl cursor-pointer">إلغاء</button>
-            <button type="submit" [disabled]="editForm.invalid || isSaving" class="px-6 py-3 text-sm font-bold bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white rounded-2xl cursor-pointer">
+            <button type="submit" [disabled]="editForm.invalid || isSaving" class="brand-button disabled:opacity-50">
               {{ isSaving ? 'جارٍ الحفظ…' : 'حفظ التعديلات' }}
             </button>
           </div>

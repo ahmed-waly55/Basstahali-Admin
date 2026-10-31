@@ -12,6 +12,7 @@ import { finalize } from 'rxjs';
 import { Account } from '../../core/services/account';
 import { CoursesService } from '../../core/services/courses';
 import { CurriculumService } from '../../core/services/curriculum-service';
+import { loadDirectoryOptions } from '../../core/utils/directory-options';
 import { User } from '../../core/services/user';
 import { StudentSchedulesService } from '../../core/services/student-schedules';
 import { CreateStudentSchedule, localScheduleDate, ScheduleOption, scheduleData, scheduleList, scheduleOptions, scheduleRecord, StudentSchedule, UpdateStudentSchedule } from '../../core/models/student-schedules';
@@ -35,6 +36,8 @@ export class StudentSchedules implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private requestVersion = 0;
   private optionVersion = 0;
+  private lookupVersion = 0;
+  private activePhoneFilter = '';
 
   readonly students = signal<ScheduleOption[]>([]);
   readonly allTeachers = signal<ScheduleOption[]>([]);
@@ -60,6 +63,7 @@ export class StudentSchedules implements OnInit {
   readonly editing = signal<StudentSchedule | null>(null);
   readonly queue = signal<CreateStudentSchedule[]>([]);
   readonly searchText = signal('');
+  readonly phoneSearch = signal('');
   selectedStudentId = '';
   readonly timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   readonly filteredRows = computed(() => {
@@ -82,17 +86,19 @@ export class StudentSchedules implements OnInit {
   }
 
   loadLookups(): void {
+    const version = ++this.lookupVersion;
     this.lookupError.set('');
-    const fail = (err: unknown) => this.lookupError.set(this.message(err, 'تعذر تحميل بعض قوائم الطلاب أو المعلمين أو المواد. أعد المحاولة.'));
+    const fail = (err: unknown) => { if (version === this.lookupVersion) this.lookupError.set(this.message(err, 'تعذر تحميل بعض قوائم الطلاب أو المعلمين أو المواد. أعد المحاولة.')); };
     const requests = [
-      { source: this.user.getStudents(), target: this.students },
-      { source: this.account.getTeachers(), target: this.allTeachers },
+      { source: loadDirectoryOptions<Record<string, unknown>>(query => this.user.getStudents(query)), target: this.students },
+      { source: loadDirectoryOptions<Record<string, unknown>>(query => this.account.getTeachers(query)), target: this.allTeachers },
       { source: this.curriculum.getSubjects(), target: this.allSubjects },
       { source: this.courseService.getCourses(), target: this.allCourses },
     ];
     for (const request of requests) {
       request.source.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
         next: (value: unknown) => {
+          if (version !== this.lookupVersion) return;
           try { request.target.set(scheduleOptions(value)); }
           catch (err) { fail(err); }
         },
@@ -104,6 +110,7 @@ export class StudentSchedules implements OnInit {
   studentChanged(): void {
     if (this.saving() || this.deleting()) return;
     this.cancelForm();
+    this.activePhoneFilter = ''; this.phoneSearch.set('');
     this.success.set('');
     this.rows.set([]);
     this.studentTeachers.set(null);
@@ -149,7 +156,7 @@ export class StudentSchedules implements OnInit {
     this.error.set('');
     this.deleteCandidate.set(null);
     const studentId = all ? '' : this.selectedStudentId;
-    const request = all ? this.service.search() : this.service.forStudent(studentId);
+    const request = all ? (this.activePhoneFilter ? this.service.search(this.activePhoneFilter) : this.service.all()) : this.service.forStudent(studentId);
     request.pipe(takeUntilDestroyed(this.destroyRef), finalize(() => {
       if (version === this.requestVersion) this.loading.set(false);
     })).subscribe({
@@ -167,6 +174,8 @@ export class StudentSchedules implements OnInit {
   }
 
   showAll(): void {
+    if (this.saving() || this.deleting()) return;
+    this.activePhoneFilter = ''; this.phoneSearch.set('');
     this.selectedStudentId = '';
     this.optionVersion++;
     this.optionsLoading.set(false);
@@ -175,6 +184,19 @@ export class StudentSchedules implements OnInit {
     this.studentCourses.set(null);
     this.cancelForm();
     this.success.set('');
+    this.loadSchedules(true);
+  }
+
+  searchByPhone(): void {
+    if (this.saving() || this.deleting() || this.loading()) return;
+    const phone = this.phoneSearch().trim();
+    if (!phone) { this.error.set('أدخل رقم هاتف الطالب للبحث.'); return; }
+    this.selectedStudentId = '';
+    this.activePhoneFilter = phone;
+    this.optionVersion++;
+    this.optionsLoading.set(false);
+    this.studentTeachers.set(null); this.studentSubjects.set(null); this.studentCourses.set(null);
+    this.optionsNote.set(''); this.cancelForm(); this.success.set('');
     this.loadSchedules(true);
   }
 
@@ -202,6 +224,7 @@ export class StudentSchedules implements OnInit {
     if (!this.canEdit(row) || this.saving()) return;
     this.cancelForm();
     this.selectedStudentId = row.studentId;
+    this.activePhoneFilter = ''; this.phoneSearch.set('');
     this.studentTeachers.set(null);
     this.studentSubjects.set(null);
     this.studentCourses.set(null);

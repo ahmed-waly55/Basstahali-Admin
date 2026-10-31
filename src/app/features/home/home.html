@@ -20,6 +20,35 @@
     }
   </nav>
 
+  <section class="panel home-schedule" aria-labelledby="home-schedule-title" [attr.aria-busy]="scheduleLoading()">
+    <header class="schedule-heading">
+      <div><p class="muted">متابعة مواعيد الأكاديمية</p><h2 id="home-schedule-title">جدول الحصص</h2></div>
+      <div class="schedule-links"><a routerLink="/student-schedules">إدارة الجدولة</a><a routerLink="/schedule">عرض الجدول الكامل <span aria-hidden="true">←</span></a></div>
+    </header>
+    @if (scheduleLoading()) {
+      <div class="schedule-state" role="status"><mat-icon aria-hidden="true">calendar_month</mat-icon><span>جارٍ تحميل جدول الحصص…</span></div>
+    } @else if (scheduleError()) {
+      <div class="state-message error-state" role="alert"><span>{{ scheduleError() }}</span><button type="button" (click)="loadSchedule()">إعادة المحاولة</button></div>
+    } @else if (schedule(); as data) {
+      <div class="schedule-context"><strong>{{ scheduleHeading() }}</strong><span>{{ scheduleDateLabel(scheduleDate(), true) }}</span><small><mat-icon aria-hidden="true">schedule</mat-icon>توقيت القاهرة</small></div>
+      @if (schedulePreview().length) {
+        <div class="schedule-preview grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          @for (item of schedulePreview(); track item.id) {
+            <article class="schedule-session">
+              <div class="session-topline"><strong>{{ item.subject }}</strong><span class="session-status" [class.is-live]="item.isLive">{{ scheduleStatusLabel(item) }}</span></div>
+              <p class="session-time"><mat-icon aria-hidden="true">schedule</mat-icon><time>{{ item.timeRange }}</time></p>
+              <dl><div><dt>الطالب</dt><dd>{{ item.studentName }}</dd></div><div><dt>المعلم</dt><dd>{{ item.teacherName }}</dd></div></dl>
+              @if (scheduleUrl(item.zoomUrl); as joinUrl) { <a [href]="joinUrl" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'فتح رابط حصة ' + item.subject + ' للطالب ' + item.studentName">فتح رابط الحصة <mat-icon aria-hidden="true">open_in_new</mat-icon></a> }
+            </article>
+          }
+        </div>
+      } @else {
+        <div class="schedule-state"><mat-icon aria-hidden="true">event_available</mat-icon><span>{{ scheduleHeading() === 'حصص اليوم' ? 'لا توجد حصص لهذا اليوم ضمن الجدول المحمّل.' : 'لا توجد حصص في الفترة المعروضة.' }}</span></div>
+      }
+      <footer class="schedule-footer"><span>{{ schedulePreview().length }} من {{ scheduleDayItems().length }} حصة في اليوم المعروض</span><span>الفترة: {{ scheduleDateLabel(data.weekStart) }}@if (data.weekEnd !== data.weekStart) { — {{ scheduleDateLabel(data.weekEnd) }} }</span></footer>
+    }
+  </section>
+
   <section aria-labelledby="academic-heading">
     <div class="section-heading flex items-center justify-between gap-4 mb-4"><h2 id="academic-heading">النشاط الأكاديمي</h2><a routerLink="/users/reports">تقارير المستخدمين <span aria-hidden="true">←</span></a></div>
     @if (usersError && !isLoadingUsers) {

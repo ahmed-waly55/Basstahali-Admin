@@ -1,3 +1,5 @@
+import { DirectoryQuery } from '../models/directory-page';
+import { directoryParams } from './directory-query';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -22,8 +24,8 @@ export class Account {
   // ==================== المشرفين (Moderators) ====================
 
   // جلب كل المشرفين
-  getModerators(): Observable<any> {
-    return this.http.get(`${environment.baseUrl}/api/v1/moderators`, { headers: this.getAuthHeaders() });
+  getModerators(query?: DirectoryQuery): Observable<any> {
+    return this.http.get(`${environment.baseUrl}/api/v1/moderators`, { headers: this.getAuthHeaders(), ...(query ? { params: directoryParams(query) } : {}) });
   }
 
   // إضافة مشرف جديد
@@ -44,8 +46,8 @@ export class Account {
   // ==================== المدرسين (Teachers) ====================
 
   // جلب كل المدرسين
-  getTeachers(): Observable<any> {
-    return this.http.get(`${environment.baseUrl}/api/v1/teachers`, { headers: this.getAuthHeaders() });
+  getTeachers(query?: DirectoryQuery): Observable<any> {
+    return this.http.get(`${environment.baseUrl}/api/v1/teachers`, { headers: this.getAuthHeaders(), ...(query ? { params: directoryParams(query) } : {}) });
   }
 
   // إضافة مدرس جديد
@@ -74,8 +76,8 @@ export class Account {
   }
 
   // جلب السجلات المؤرشفة للمدرسين (Archived Records)
-  getArchivedTeachers(): Observable<any> {
-    return this.http.get(`${environment.baseUrl}/api/v1/archived-records/teachers`, { headers: this.getAuthHeaders() });
+  getArchivedTeachers(query?: DirectoryQuery): Observable<any> {
+    return this.http.get(`${environment.baseUrl}/api/v1/archived-records/teachers`, { headers: this.getAuthHeaders(), ...(query ? { params: directoryParams(query) } : {}) });
   }
 
   // rest password by admin

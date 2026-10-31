@@ -1,12 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { AfterViewInit, Component, inject, ViewChild, OnInit, ChangeDetectorRef, TemplateRef } from '@angular/core';
+import { AfterViewInit, Component, inject, ViewChild, OnInit, ChangeDetectorRef, TemplateRef, DestroyRef } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
+import { DirectoryPaginator } from '../../../../shared/components/directory-paginator/directory-paginator';
+import { DirectoryPage, DirectoryPageChange, parseDirectoryPage } from '../../../../core/models/directory-page';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subject, debounceTime } from 'rxjs';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatSort, MatSortModule } from '@angular/material/sort';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -26,7 +29,7 @@ import { CurriculumService } from '../../../../core/services/curriculum-service'
     ReactiveFormsModule,
     RouterModule,
     MatTableModule,
-    MatPaginatorModule,
+    DirectoryPaginator,
     MatSortModule,
     MatFormFieldModule,
     MatInputModule,
@@ -47,6 +50,21 @@ export class Teacher implements OnInit, AfterViewInit {
   private fb = inject(FormBuilder);
   private cdr = inject(ChangeDetectorRef);
   private dialog = inject(MatDialog);
+  private destroyRef = inject(DestroyRef);
+  private searchChanges = new Subject<boolean>();
+  private activeVersion = 0;
+  private archiveVersion = 0;
+  activeSearch = '';
+  archivedSearch = '';
+  activeLoadError = '';
+  archivedLoadError = '';
+  activePage: DirectoryPage<any> = this.emptyPage();
+  archivedPage: DirectoryPage<any> = this.emptyPage();
+  private emptyPage(): DirectoryPage<any> {
+    return { items: [], pageNumber: 1, pageSize: 20, totalCount: null, totalPages: null,
+      hasPreviousPage: false, hasNextPage: false, serverPaged: true };
+  }
+
 
   isLoading = false;
   isDeletedLoading = false;
@@ -66,8 +84,6 @@ export class Teacher implements OnInit, AfterViewInit {
   dataSource = new MatTableDataSource<any>([]);
   archivedDataSource = new MatTableDataSource<any>([]);
 
-  @ViewChild('activePaginator') activePaginator!: MatPaginator;
-  @ViewChild('archivedPaginator') archivedPaginator!: MatPaginator;
   @ViewChild('activeSort') activeSort!: MatSort;
   @ViewChild('archivedSort') archivedSort!: MatSort;
 
@@ -94,6 +110,10 @@ export class Teacher implements OnInit, AfterViewInit {
   });
 
   ngOnInit() {
+    this.searchChanges.pipe(debounceTime(300), takeUntilDestroyed(this.destroyRef)).subscribe(archived => {
+      if (archived) { this.archivedPage.pageNumber = 1; this.loadArchivedTeachers(); }
+      else { this.activePage.pageNumber = 1; this.loadTeachers(); }
+    });
     this.loadDropdownData();
     this.loadTeachers();
     this.loadArchivedTeachers();
@@ -105,29 +125,48 @@ export class Teacher implements OnInit, AfterViewInit {
   }
 
   private setupActiveTableFeatures() {
-    if (this.activePaginator) this.dataSource.paginator = this.activePaginator;
     if (this.activeSort) this.dataSource.sort = this.activeSort;
   }
 
   private setupArchivedTableFeatures() {
-    if (this.archivedPaginator) this.archivedDataSource.paginator = this.archivedPaginator;
     if (this.archivedSort) this.archivedDataSource.sort = this.archivedSort;
   }
 
-  // فلترة والبحث السريع في الجداول
-  applyFilter(event: Event, isArchived = false) {
-    const filterValue = (event.target as HTMLInputElement).value.trim().toLowerCase();
-    if (isArchived) {
-      this.archivedDataSource.filter = filterValue;
-    } else {
-      this.dataSource.filter = filterValue;
-    }
+  applyFilter(event: Event, isArchived = false): void {
+    const value = (event.target as HTMLInputElement).value;
+    if (isArchived) { this.archivedSearch = value; this.archiveVersion++; }
+    else { this.activeSearch = value; this.activeVersion++; }
+    this.searchChanges.next(isArchived);
+  }
+
+  changePage(event: DirectoryPageChange, archived = false): void {
+    if (archived ? this.isDeletedLoading : this.isLoading) return;
+    const page = archived ? this.archivedPage : this.activePage;
+    page.pageNumber = event.pageNumber;
+    page.pageSize = event.pageSize;
+    if (page.serverPaged) archived ? this.loadArchivedTeachers() : this.loadTeachers();
+    else this.renderLocalPage(archived);
+  }
+
+  private renderLocalPage(archived: boolean): void {
+    const page = archived ? this.archivedPage : this.activePage;
+    const search = (archived ? this.archivedSearch : this.activeSearch).trim().toLocaleLowerCase();
+    const rows = page.items.filter(row => !search || [row.fullName,row.phoneNumber,row.userName].join(' ').toLocaleLowerCase().includes(search));
+    const totalPages = Math.ceil(rows.length / page.pageSize);
+    page.pageNumber = Math.max(1, Math.min(page.pageNumber, totalPages || 1));
+    page.totalCount = rows.length;
+    page.totalPages = totalPages;
+    page.hasPreviousPage = page.pageNumber > 1;
+    page.hasNextPage = page.pageNumber < totalPages;
+    (archived ? this.archivedDataSource : this.dataSource).data = rows.slice((page.pageNumber - 1) * page.pageSize, page.pageNumber * page.pageSize);
+    this.cdr.markForCheck();
   }
 
   loadDropdownData() {
     this.curriculumService.getCurriculums().subscribe({
       next: (res: any) => {
         this.curriculaList = Array.isArray(res) ? res : (res.data?.items || res.data || []);
+        this.cdr.markForCheck();
       },
       error: (err) => console.error('Error loading curricula', err)
     });
@@ -135,6 +174,7 @@ export class Teacher implements OnInit, AfterViewInit {
     this.curriculumService.getSubjects().subscribe({
       next: (res: any) => {
         this.subjectsList = Array.isArray(res) ? res : (res.data?.items || res.data || []);
+        this.cdr.markForCheck();
       },
       error: (err) => console.error('Error loading subjects', err)
     });
@@ -142,50 +182,55 @@ export class Teacher implements OnInit, AfterViewInit {
     this.curriculumService.getGradeLevels().subscribe({
       next: (res: any) => {
         this.gradeLevelsList = Array.isArray(res) ? res : (res.data?.items || res.data || []);
+        this.cdr.markForCheck();
       },
       error: (err) => console.error('Error loading grade levels', err)
     });
   }
 
-  // 1. جلب المدرسين النشطين
-  loadTeachers(): void {
-    this.isLoading = true;
-    this.teacherService.getTeachers().subscribe({
-      next: (res: any) => {
-        const data = Array.isArray(res) ? res : (res.data?.items || res.data || []);
-        this.dataSource.data = data;
-        setTimeout(() => this.setupActiveTableFeatures());
-        this.isLoading = false;
-        this.cdr.detectChanges();
+  loadTeachers(): void { this.loadDirectory(false); }
+  loadArchivedTeachers(): void { this.loadDirectory(true); }
+
+  private loadDirectory(archived: boolean): void {
+    const page = archived ? this.archivedPage : this.activePage;
+    const requestedPage = page.pageNumber;
+    const requestedSize = page.pageSize;
+    // The previous query's totals and rows must never describe a pending/failed new query.
+    page.items = [];
+    page.totalCount = null;
+    page.totalPages = null;
+    page.hasPreviousPage = requestedPage > 1;
+    page.hasNextPage = false;
+    const version = archived ? ++this.archiveVersion : ++this.activeVersion;
+    const query = { PageNumber: requestedPage, PageSize: requestedSize,
+      Search: (archived ? this.archivedSearch : this.activeSearch).trim() };
+    if (archived) { this.isDeletedLoading = true; this.archivedLoadError = ''; this.archivedDataSource.data = []; }
+    else { this.isLoading = true; this.activeLoadError = ''; this.dataSource.data = []; }
+    const request = archived ? this.teacherService.getArchivedTeachers(query) : this.teacherService.getTeachers(query);
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: response => {
+        if (version !== (archived ? this.archiveVersion : this.activeVersion)) return;
+        try {
+          const next = parseDirectoryPage<any>(response, requestedPage, requestedSize);
+          if (next.serverPaged && next.totalPages !== null && requestedPage > Math.max(1,next.totalPages)) {
+            page.pageNumber = Math.max(1,next.totalPages); this.loadDirectory(archived); return;
+          }
+          if (archived) this.archivedPage = next; else this.activePage = next;
+          if (next.serverPaged) (archived ? this.archivedDataSource : this.dataSource).data = next.items;
+          else this.renderLocalPage(archived);
+          if (archived) this.isDeletedLoading = false; else this.isLoading = false;
+          this.cdr.markForCheck();
+        } catch (error) { this.directoryError(archived,error); }
       },
-      error: (err) => {
-        this.isLoading = false;
-        Swal.fire({
-          icon: 'error',
-          title: 'خطأ في التحميل',
-          text: err?.error?.message || 'فشل في جلب بيانات المدرسين',
-          confirmButtonColor: '#4f46e5'
-        });
-      }
+      error: error => { if (version === (archived ? this.archiveVersion : this.activeVersion)) this.directoryError(archived,error); }
     });
   }
 
-  // 2. جلب المدرسين المحذوفين / المؤرشفين
-  loadArchivedTeachers(): void {
-    this.isDeletedLoading = true;
-    this.teacherService.getArchivedTeachers().subscribe({
-      next: (res: any) => {
-        const data = Array.isArray(res) ? res : (res.data?.items || res.data || []);
-        this.archivedDataSource.data = data;
-        setTimeout(() => this.setupArchivedTableFeatures());
-        this.isDeletedLoading = false;
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.isDeletedLoading = false;
-        console.error('Error loading archived teachers', err);
-      }
-    });
+  private directoryError(archived: boolean,error: any): void {
+    const message = error?.error?.message || error?.message || 'تعذر تحميل قائمة المعلمين. حاول مرة أخرى.';
+    if (archived) { this.isDeletedLoading = false; this.archivedLoadError = message; }
+    else { this.isLoading = false; this.activeLoadError = message; }
+    this.cdr.markForCheck();
   }
 
   // 3. فتح مودال الإضافة
@@ -417,6 +462,7 @@ export class Teacher implements OnInit, AfterViewInit {
       this.teacherService.updateTeacher(this.currentTeacherId, payload).subscribe({
         next: (res: any) => {
           this.isLoading = false;
+          if (res?.success === false) { void Swal.fire('تعذر الحفظ',res.message || 'لم يتم حفظ التغيير.','error'); return; }
           Swal.fire({
             icon: 'success',
             title: 'تم التعديل بنجاح!',
@@ -443,6 +489,7 @@ export class Teacher implements OnInit, AfterViewInit {
       this.teacherService.createTeacher(payload).subscribe({
         next: (res: any) => {
           this.isLoading = false;
+          if (res?.success === false) { void Swal.fire('تعذر الحفظ',res.message || 'لم يتم حفظ التغيير.','error'); return; }
           Swal.fire({
             icon: 'success',
             title: 'تمت الإضافة بنجاح!',
@@ -481,6 +528,7 @@ export class Teacher implements OnInit, AfterViewInit {
       if (result.isConfirmed) {
         this.teacherService.deleteTeacher(id).subscribe({
           next: (res: any) => {
+            if (res?.success === false) { void Swal.fire('تعذر التنفيذ',res.message || 'لم يتم تنفيذ العملية.','error'); return; }
             Swal.fire({
               icon: 'success',
               title: 'تم الحذف!',
@@ -519,6 +567,7 @@ export class Teacher implements OnInit, AfterViewInit {
       if (result.isConfirmed) {
         this.teacherService.restoreTeacher(id).subscribe({
           next: (res: any) => {
+            if (res?.success === false) { void Swal.fire('تعذر التنفيذ',res.message || 'لم يتم تنفيذ العملية.','error'); return; }
             Swal.fire({
               icon: 'success',
               title: 'تم الاسترجاع!',

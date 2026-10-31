@@ -1,6 +1,6 @@
 /* تظبيط اتجاه وحواف التابات والمودال للغة العربية */
 ::ng-deep .custom-tabs .mat-mdc-tab-header {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--admin-border);
 }
 
 ::ng-deep .custom-material-dialog .mat-mdc-dialog-container .mdc-dialog__surface {
@@ -10,5 +10,7 @@
 
 ::ng-deep .search-field .mat-mdc-text-field-wrapper {
   border-radius: 1rem !important;
-  background-color: #f8fafc;
+  background-color: var(--admin-surface-soft);
 }
+
+:host{display:block;color:var(--admin-ink)}.teacher-workspace{max-width:1440px;margin:auto}.teacher-page-header{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px}.teacher-page-header h1{font-size:26px;font-weight:800}.directory-error{background:color-mix(in srgb,#d94565 12%,var(--admin-surface));color:var(--admin-ink);padding:12px 18px;border-radius:9px;margin:10px 16px;font-size:13px}.directory-loading{font-size:13px;color:var(--admin-muted);padding:12px 18px}.teacher-workspace table{background:var(--admin-surface);min-width:680px}.teacher-workspace th{background:var(--admin-surface-soft)}@media(max-width:700px){.teacher-page-header{align-items:flex-start;flex-wrap:wrap}.teacher-page-header h1{font-size:23px}}

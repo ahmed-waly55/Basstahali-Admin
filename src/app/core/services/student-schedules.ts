@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -14,9 +14,14 @@ export class StudentSchedulesService {
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : new HttpHeaders();
   }
 
-  /** Query parameter names are absent from the provided docs; do not guess them. */
-  search(): Observable<unknown> {
-    return this.http.get(`${this.url}/search`, { headers: this.headers }).pipe(map(scheduleData));
+  all(): Observable<unknown> {
+    return this.http.get(this.url, { headers: this.headers }).pipe(map(scheduleData));
+  }
+
+  /** The dashboard contract requires the student's phoneNumber for this search. */
+  search(phoneNumber: string): Observable<unknown> {
+    const params = new HttpParams().set('phoneNumber', phoneNumber.trim());
+    return this.http.get(`${this.url}/search`, { headers: this.headers, params }).pipe(map(scheduleData));
   }
 
   forStudent(studentId: string): Observable<unknown> {
