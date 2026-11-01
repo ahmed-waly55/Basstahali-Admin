@@ -12,4 +12,4 @@ npm test -- --watch=false --ts-config=tsconfig.admin.spec.json \
   --include='src/app/shared/components/header/*.spec.ts' \
   --include='src/app/shared/components/directory-paginator/*.spec.ts' \
   --include='src/app/features/users-component/pages/{students,moderator,teacher}/*.spec.ts' \
-  --include='src/app/features/{admin-operations,student-finance,courses,curriculum,expenses,home,settings,analytics,schedule-overview,student-schedules}/*.spec.ts'
+  --include='src/app/features/{admin-operations,student-finance,courses,curriculum,expenses,home,settings,analytics,student-schedules}/*.spec.ts'

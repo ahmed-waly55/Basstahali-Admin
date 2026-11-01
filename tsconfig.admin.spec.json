@@ -19,8 +19,6 @@
     "src/app/core/utils/*.spec.ts",
     "src/app/features/analytics/analytics.spec.ts",
     "src/app/core/models/directory-page.spec.ts",
-    "src/app/core/models/schedule-overview.spec.ts",
-    "src/app/features/schedule-overview/*.spec.ts",
     "src/app/features/student-schedules/*.spec.ts",
     "src/app/features/users-component/pages/teacher/*.spec.ts",
     "src/app/shared/components/directory-paginator/*.spec.ts"

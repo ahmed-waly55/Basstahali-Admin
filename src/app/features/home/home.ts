@@ -5,17 +5,13 @@ import {
   OnInit,
   ViewChild,
   ChangeDetectorRef,
-  effect,
-  computed,
-  DestroyRef,
-  signal
+  effect
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { BaseChartDirective } from 'ng2-charts';
-import { finalize, Subscription } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 import {
   Chart,
   ChartConfiguration,
@@ -29,8 +25,6 @@ import {
 } from 'chart.js';
 import { AnalyticsService } from '../../core/services/analytics';
 import { ThemeService } from '../../core/services/theme';
-import { ScheduleOverviewService } from '../../core/services/schedule-overview';
-import { cairoTodayKey, safeScheduleUrl, scheduleDateLabel, ScheduleOverview, scheduleStatusLabel } from '../../core/models/schedule-overview';
 
 // تسجيل مكونات Chart.js
 Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -111,24 +105,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   private readonly _cdr = inject(ChangeDetectorRef);
   private readonly _theme = inject(ThemeService);
   private subscriptions = new Subscription();
-  private readonly scheduleService = inject(ScheduleOverviewService);
-  private readonly destroyRef = inject(DestroyRef);
-  readonly schedule = signal<ScheduleOverview | null>(null);
-  readonly scheduleLoading = signal(false);
-  readonly scheduleError = signal('');
-  readonly scheduleDateLabel = scheduleDateLabel;
-  readonly scheduleStatusLabel = scheduleStatusLabel;
-  readonly scheduleUrl = safeScheduleUrl;
-  readonly scheduleDate = computed(() => {
-    const data = this.schedule();
-    if (!data) return '';
-    const today = cairoTodayKey();
-    return today >= data.weekStart && today <= data.weekEnd ? today : (data.items[0]?.dateKey ?? data.weekStart);
-  });
-  readonly scheduleDayItems = computed(() => this.schedule()?.items.filter(item => item.dateKey === this.scheduleDate()) ?? []);
-  readonly schedulePreview = computed(() => this.scheduleDayItems().slice(0, 4));
-  readonly scheduleHeading = computed(() => this.scheduleDate() === cairoTodayKey() ? 'حصص اليوم' : 'حصص الفترة المعروضة');
-
 
   users: HomeUsersData | null = null;
   isLoadingUsers = false;
@@ -145,13 +121,13 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   readonly quickActions = [
     { title: 'إدارة الطلاب', detail: 'الملفات والتسجيل', icon: 'school', route: '/users/students' },
-    { title: 'جداول الحصص', detail: 'المواعيد والحضور', icon: 'calendar_month', route: '/schedule' },
+    { title: 'جداول الحصص', detail: 'المواعيد والحضور', icon: 'calendar_month', route: '/student-schedules' },
     { title: 'مالية الطلاب', detail: 'المدفوعات والأقساط', icon: 'account_balance_wallet', route: '/student-finance' },
     { title: 'طلبات المدرسين', detail: 'مراجعة طلبات التسجيل', icon: 'how_to_reg', route: '/teacher-forms' }
   ];
 
   get isRefreshing(): boolean {
-    return this.isLoadingUsers || this.isLoadingCosts || this.isLoadingChart || this.isLoadingOperations || this.scheduleLoading();
+    return this.isLoadingUsers || this.isLoadingCosts || this.isLoadingChart || this.isLoadingOperations;
   }
 
   // نوع المخطط الثابت
@@ -235,20 +211,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.getCostsAnalysis();
     this.getRevenueExpenses();
     this.getRecentOperations();
-    this.loadSchedule();
-  }
-
-  loadSchedule(): void {
-    if (this.scheduleLoading()) return;
-    this.scheduleLoading.set(true);
-    this.scheduleError.set('');
-    this.scheduleService.getSchedule().pipe(
-      finalize(() => this.scheduleLoading.set(false)),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: data => this.schedule.set(data),
-      error: () => this.scheduleError.set('تعذّر تحميل جدول الحصص. حاول مجددًا.')
-    });
   }
 
   getUsers(): void {
