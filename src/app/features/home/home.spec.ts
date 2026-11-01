@@ -37,10 +37,10 @@ describe('Home admin overview', () => {
     fixture.detectChanges();
   }
 
-  it('links directly to the four administrative workflows', async () => {
+  it('links directly to the remaining administrative workflows', async () => {
     await render();
     const links = Array.from(fixture.nativeElement.querySelectorAll('nav a')) as HTMLAnchorElement[];
-    expect(links.map(link => link.getAttribute('href'))).toEqual(['/users/students', '/student-schedules', '/student-finance', '/teacher-forms']);
+    expect(links.map(link => link.getAttribute('href'))).toEqual(['/users/students', '/student-finance', '/teacher-forms']);
     expect(fixture.nativeElement.querySelector('h1').textContent).toContain('نظرة عامة');
   });
 
@@ -108,6 +108,67 @@ describe('Home admin overview', () => {
     fixture.detectChanges();
     expect(component.barChartOptions.plugins?.legend?.labels?.color).toBe('#abb3c9');
     expect(component.barChartData.datasets[1].backgroundColor).toBe('#b699ed');
+  });
+
+  it('compares the two known role counts without adding the total users as a third category', async () => {
+    api.getHomeUsers.mockReturnValue(of({ success: true, data: { activeUsers: 100, activeStudents: 21, activeTeachers: 8 } }));
+    await render();
+    expect(component.userChartData.datasets[0].data).toEqual([21, 8]);
+    expect(component.userChartData.labels).toEqual(['الطلاب النشطون', 'المعلمون النشطون']);
+    const values = fixture.nativeElement.querySelector('.user-chart-values').textContent;
+    expect(values).toContain('21'); expect(values).toContain('8');
+    expect(values).not.toContain('100');
+  });
+
+  it('preserves real zero counts and explains partially unavailable role counts', async () => {
+    api.getHomeUsers.mockReturnValue(of({ success: true, data: { activeStudents: 0, activeTeachers: -1, activeUsers: null } }));
+    await render();
+    expect(component.userChartData.datasets[0].data).toEqual([0]);
+    expect(fixture.nativeElement.querySelector('.users-chart-panel').textContent).toContain('بعض أعداد الحسابات غير متاحة');
+    expect(component.users?.activeTeachers).toBeUndefined();
+  });
+
+  it('does not draw incomplete role statistics as zero counts', async () => {
+    api.getHomeUsers.mockReturnValue(of({ success: true, data: {} }));
+    await render();
+    const panel = fixture.nativeElement.querySelector('.users-chart-panel');
+    expect(panel.querySelector('canvas')).toBeNull();
+    expect(panel.textContent).toContain('غير متاحة حاليًا');
+  });
+
+  it('switches monthly chart presentation without a second API request or changing the underlying values', async () => {
+    api.getRevenueExpenses.mockReturnValue(of({ success: true, data: { ...emptyRevenue, months: [
+      { monthName: 'سبتمبر', currency: 'EGP', revenue: 120, expenses: 80 },
+      { monthName: 'أكتوبر', currency: 'EGP', revenue: 180, expenses: 90 }
+    ] } }));
+    await render();
+    const toggle = fixture.nativeElement.querySelector('.chart-type-toggle button:last-child') as HTMLButtonElement;
+    toggle.click(); fixture.detectChanges();
+    expect(toggle.getAttribute('aria-pressed')).toBe('true');
+    expect(component.monthlyChartType).toBe('line');
+    expect(component.lineChartData.datasets.map(item => item.data)).toEqual([[80, 90], [120, 180]]);
+    expect(fixture.nativeElement.querySelector('canvas[aria-label^="اتجاه الإيرادات"]')).not.toBeNull();
+    expect(api.getRevenueExpenses).toHaveBeenCalledTimes(1);
+  });
+
+  it('suppresses a monthly series that would combine different currencies', async () => {
+    api.getRevenueExpenses.mockReturnValue(of({ success: true, data: { ...emptyRevenue, months: [
+      { monthName: 'أكتوبر', currency: 'USD', revenue: 120, expenses: 80 }
+    ] } }));
+    await render();
+    expect(component.monthlyRows).toEqual([]);
+    expect(component.barChartData.labels).toEqual([]);
+    expect(fixture.nativeElement.querySelector('.chart-container').textContent).toContain('غير متوافقة');
+    expect(fixture.nativeElement.querySelector('.chart-canvas')).toBeNull();
+  });
+
+  it('does not plot a missing financial amount as zero', async () => {
+    api.getRevenueExpenses.mockReturnValue(of({ success: true, data: { ...emptyRevenue, months: [
+      { monthName: 'أكتوبر', currency: 'EGP', revenue: null, expenses: 80 }
+    ] } }));
+    await render();
+    expect(component.monthlyRows).toEqual([]);
+    expect(component.monthlyChartMessage).toContain('غير مكتملة');
   });
 
 });

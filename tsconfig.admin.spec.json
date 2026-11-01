@@ -3,7 +3,6 @@
   "include": [
     "src/**/*.d.ts",
     "src/app/core/services/*.spec.ts",
-    "src/app/core/models/student-schedules.spec.ts",
     "src/app/features/users-component/pages/students/*.spec.ts",
     "src/app/features/users-component/pages/moderator/*.spec.ts",
     "src/app/features/admin-operations/*.spec.ts",
@@ -19,7 +18,6 @@
     "src/app/core/utils/*.spec.ts",
     "src/app/features/analytics/analytics.spec.ts",
     "src/app/core/models/directory-page.spec.ts",
-    "src/app/features/student-schedules/*.spec.ts",
     "src/app/features/users-component/pages/teacher/*.spec.ts",
     "src/app/shared/components/directory-paginator/*.spec.ts"
   ]

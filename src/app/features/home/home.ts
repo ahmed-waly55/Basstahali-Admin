@@ -3,7 +3,6 @@ import {
   inject,
   OnDestroy,
   OnInit,
-  ViewChild,
   ChangeDetectorRef,
   effect
 } from '@angular/core';
@@ -18,6 +17,9 @@ import {
   ChartOptions,
   BarController,
   BarElement,
+  LineController,
+  LineElement,
+  PointElement,
   CategoryScale,
   LinearScale,
   Tooltip,
@@ -27,7 +29,7 @@ import { AnalyticsService } from '../../core/services/analytics';
 import { ThemeService } from '../../core/services/theme';
 
 // تسجيل مكونات Chart.js
-Chart.register(BarController, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+Chart.register(BarController, BarElement, LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 // الواجهات (Interfaces)
 export interface MonthFinance {
@@ -99,8 +101,6 @@ export interface ApiResponse<T> {
   styleUrl: './home.css',
 })
 export class HomeComponent implements OnInit, OnDestroy {
-  @ViewChild(BaseChartDirective) chart?: BaseChartDirective;
-
   private readonly _analyticsService = inject(AnalyticsService);
   private readonly _cdr = inject(ChangeDetectorRef);
   private readonly _theme = inject(ThemeService);
@@ -121,7 +121,6 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   readonly quickActions = [
     { title: 'إدارة الطلاب', detail: 'الملفات والتسجيل', icon: 'school', route: '/users/students' },
-    { title: 'جداول الحصص', detail: 'المواعيد والحضور', icon: 'calendar_month', route: '/student-schedules' },
     { title: 'مالية الطلاب', detail: 'المدفوعات والأقساط', icon: 'account_balance_wallet', route: '/student-finance' },
     { title: 'طلبات المدرسين', detail: 'مراجعة طلبات التسجيل', icon: 'how_to_reg', route: '/teacher-forms' }
   ];
@@ -130,15 +129,22 @@ export class HomeComponent implements OnInit, OnDestroy {
     return this.isLoadingUsers || this.isLoadingCosts || this.isLoadingChart || this.isLoadingOperations;
   }
 
-  // نوع المخطط الثابت
-  public readonly barChartType: 'bar' = 'bar';
-
-  public barChartOptions: ChartOptions<'bar'> = this.createChartOptions(false);
+  monthlyChartType: 'bar' | 'line' = 'bar';
+  monthlyChartMessage = '';
+  monthlyRows: MonthFinance[] = [];
+  userChartRows: { label: string; count: number }[] = [];
+  userChartData: ChartConfiguration<'bar'>['data'] = { labels: [], datasets: [] };
+  userChartOptions: ChartOptions<'bar'> = this.createUserChartOptions(false);
+  barChartOptions: ChartOptions<'bar'> = this.createChartOptions(false);
+  lineChartOptions: ChartOptions<'line'> = this.createChartOptions(false);
+  lineChartData: ChartConfiguration<'line'>['data'] = { labels: [], datasets: [] };
 
   constructor() {
     effect(() => {
       const dark = this._theme.isDark();
       this.barChartOptions = this.createChartOptions(dark);
+      this.lineChartOptions = this.createChartOptions(dark);
+      this.userChartOptions = this.createUserChartOptions(dark);
       this.barChartData = {
         ...this.barChartData,
         datasets: this.barChartData.datasets.map((dataset, index) => ({
@@ -146,10 +152,12 @@ export class HomeComponent implements OnInit, OnDestroy {
           backgroundColor: index === 0 ? '#efb935' : (dark ? '#b699ed' : '#6241a5')
         }))
       };
+      this.updateUserChart();
+      this.updateLineChart();
     });
   }
 
-  private createChartOptions(dark: boolean): ChartOptions<'bar'> {
+  private createChartOptions(dark: boolean): ChartOptions<'bar'> & ChartOptions<'line'> {
     const text = dark ? '#abb3c9' : '#767b8d';
     return {
       responsive: true,
@@ -167,6 +175,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           }
         }
       },
+      interaction: { intersect: false, mode: 'index' },
       scales: {
         x: {
           grid: { display: false },
@@ -181,6 +190,35 @@ export class HomeComponent implements OnInit, OnDestroy {
       }
     };
   }
+
+  private createUserChartOptions(dark: boolean): ChartOptions<'bar'> {
+    const options = this.createChartOptions(dark);
+    return { ...options, indexAxis: 'y', plugins: { ...options.plugins, legend: { display: false } }, scales: {
+      x: { beginAtZero: true, ticks: { precision: 0, color: dark ? '#abb3c9' : '#767b8d' }, grid: { color: dark ? '#343b50' : '#f0f1f5' } },
+      y: { ticks: { color: dark ? '#abb3c9' : '#767b8d', font: { family: 'Tajawal, sans-serif' } }, grid: { display: false } }
+    } };
+  }
+
+  private count(value: unknown): number | undefined {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+  }
+
+  private updateUserChart(): void {
+    this.userChartRows = [
+      { label: 'الطلاب النشطون', count: this.users?.activeStudents },
+      { label: 'المعلمون النشطون', count: this.users?.activeTeachers }
+    ].filter((item): item is { label: string; count: number } => this.count(item.count) !== undefined);
+    this.userChartData = { labels: this.userChartRows.map(item => item.label), datasets: [{ label: 'عدد الحسابات النشطة', data: this.userChartRows.map(item => item.count), backgroundColor: this.userChartRows.map((_,index) => index === 0 ? (this._theme.isDark() ? '#b699ed' : '#6241a5') : '#efb935'), borderRadius: 6, maxBarThickness: 34 }] };
+  }
+
+  private updateLineChart(): void {
+    this.lineChartData = { labels: this.monthlyRows.map(item => item.monthName), datasets: [
+      { label: 'المصروفات', data: this.monthlyRows.map(item => item.expenses), borderColor: '#efb935', backgroundColor: '#efb935', pointRadius: 3, pointHoverRadius: 5, tension: 0.25, fill: false },
+      { label: 'الإيرادات', data: this.monthlyRows.map(item => item.revenue), borderColor: this._theme.isDark() ? '#b699ed' : '#6241a5', backgroundColor: this._theme.isDark() ? '#b699ed' : '#6241a5', pointRadius: 3, pointHoverRadius: 5, tension: 0.25, fill: false }
+    ] };
+  }
+
+  setMonthlyChartType(type: 'bar' | 'line'): void { this.monthlyChartType = type; }
 
   public barChartData: ChartConfiguration<'bar'>['data'] = {
     labels: [],
@@ -219,12 +257,16 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.usersError = false;
     const sub = this._analyticsService.getHomeUsers().subscribe({
       next: (res: ApiResponse<HomeUsersData>) => {
-        this.users = res.success !== false ? res.data ?? null : null;
+        const data = res.success !== false ? res.data : null;
+        this.users = data && typeof data === 'object' && !Array.isArray(data) ? { ...data, activeUsers: this.count(data.activeUsers), activeStudents: this.count(data.activeStudents), activeTeachers: this.count(data.activeTeachers) } : null;
+        this.updateUserChart();
         this.usersError = !this.users;
         this.isLoadingUsers = false;
         this._cdr.markForCheck();
       },
       error: () => {
+        this.users = null;
+        this.updateUserChart();
         this.usersError = true;
         this.isLoadingUsers = false;
         this._cdr.markForCheck();
@@ -282,16 +324,21 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.isLoadingChart = false;
         this.revenueExpenses = res.success !== false ? res.data ?? null : null;
         this.chartError = !this.revenueExpenses;
-        const months = this.revenueExpenses?.months ?? [];
+        const rawMonths = this.revenueExpenses?.months;
+        const currency = this.revenueExpenses?.currency;
+        const months = Array.isArray(rawMonths) ? rawMonths : [];
+        const valid = Array.isArray(rawMonths) && typeof currency === 'string' && currency.trim().length > 0 && months.every(item => item && typeof item.monthName === 'string' && item.monthName.trim() && item.currency === currency && Number.isFinite(item.expenses) && Number.isFinite(item.revenue));
+        this.monthlyRows = valid ? months : [];
+        this.monthlyChartMessage = valid ? '' : 'تعذّر عرض الرسم: بيانات الأشهر أو عملاتها غير مكتملة أو غير متوافقة مع عملة التقرير.';
         this.barChartData = {
-          labels: months.map(item => item.monthName),
+          labels: this.monthlyRows.map(item => item.monthName),
           datasets: [
-            { ...this.barChartData.datasets[0], data: months.map(item => item.expenses) },
-            { ...this.barChartData.datasets[1], data: months.map(item => item.revenue) }
+            { ...this.barChartData.datasets[0], data: this.monthlyRows.map(item => item.expenses) },
+            { ...this.barChartData.datasets[1], data: this.monthlyRows.map(item => item.revenue) }
           ]
         };
         this._cdr.markForCheck();
-        this.chart?.update();
+        this.updateLineChart();
       },
       error: () => {
         this.chartError = true;

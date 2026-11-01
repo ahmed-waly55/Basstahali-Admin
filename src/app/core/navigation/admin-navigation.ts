@@ -17,7 +17,6 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { label: 'التعليم والطلاب', items: [
     { label: 'الطلاب', route: '/users/students', icon: 'school', keywords: 'طالب تسجيل اضافة ارشيف استعادة' },
     { label: 'المعلمون', route: '/users/teachers', icon: 'co_present', keywords: 'المدرسين مدرس معلم' },
-    { label: 'إدارة الجدولة', route: '/student-schedules', icon: 'edit_calendar', keywords: 'اضافة موعد جدولة طالب حصة' },
     { label: 'الكورسات', route: '/courses', icon: 'play_lesson', keywords: 'دورات اشتراكات دورة' },
     { label: 'المناهج والمراحل', route: '/curriculum', icon: 'auto_stories', keywords: 'مواد صفوف منهج مادة تعليمية' },
     { label: 'طلبات المعلمين', route: '/teacher-forms', icon: 'assignment_ind', keywords: 'مدرسين موافقة رفض طلبات' },

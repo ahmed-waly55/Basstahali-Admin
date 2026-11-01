@@ -1,10 +1,10 @@
-<div class="p-6 space-y-6 bg-gray-50 min-h-screen font-sans" dir="rtl">
+<div class="analytics-page p-6 space-y-6 bg-gray-50 min-h-screen font-sans" dir="rtl">
 
   <!-- Page Header -->
   <div class="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
     <div>
       <h1 class="text-2xl font-bold text-gray-800">لوحة التحليلات المالية</h1>
-      <p class="text-sm text-gray-500 mt-1">متابعة الإيرادات، المصروفات، وأداء الحركات المالية للطلاب لحظياً</p>
+      <p class="text-sm text-gray-500 mt-1">قراءة أوضح للإيرادات والتكاليف والربحية ومراجعة تفاصيل العمليات.</p>
     </div>
     <button mat-flat-button color="primary" (click)="exportToExcel()" [disabled]="exporting()" [attr.aria-busy]="exporting()" class="!rounded-xl !px-6 !py-2 flex items-center gap-2 cursor-pointer">
       <mat-icon>download</mat-icon>
@@ -76,7 +76,7 @@
           <p class="text-sm font-medium text-gray-500">صافي الربح</p>
           <h3 class="text-3xl font-bold text-gray-900 mt-2">
             {{ netProfit?.currentValue | number:'1.2-2' }}
-            <span class="text-sm font-normal text-gray-500">{{ netProfit?.currency || 'EGP' }}</span>
+            <span class="text-sm font-normal text-gray-500">{{ netProfit?.currency || 'العملة غير محددة' }}</span>
           </h3>
         </div>
         <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -109,7 +109,7 @@
         <div>
           <p class="text-sm font-medium text-gray-500">الربح الصافي المحقق</p>
           <h3 class="text-3xl font-bold mt-2">{{ netProfit?.realizedNetProfit }}
-             <span class="text-sm font-normal text-gray-500"> EGP</span>
+             <span class="text-sm font-normal text-gray-500">{{ netProfit?.currency || 'العملة غير محددة' }}</span>
           </h3>
         </div>
         <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
@@ -122,6 +122,41 @@
     </div>
 
   </div>
+
+  <section class="comparisons" aria-labelledby="comparison-title">
+    <header class="comparison-heading">
+      <div><p class="comparison-eyebrow">الأداء المالي</p><h2 id="comparison-title">مقارنة الفترات</h2><p>كل رسم يعرض القيم والعملة الواردة في تقريره.</p></div>
+      <div class="chart-switch" role="group" aria-label="طريقة عرض المقارنة">
+        <button type="button" [class.selected]="chartType() === 'bar'" [attr.aria-pressed]="chartType() === 'bar'" (click)="chartType.set('bar')"><mat-icon aria-hidden="true">bar_chart</mat-icon>أعمدة</button>
+        <button type="button" [class.selected]="chartType() === 'line'" [attr.aria-pressed]="chartType() === 'line'" (click)="chartType.set('line')"><mat-icon aria-hidden="true">show_chart</mat-icon>خطّي</button>
+      </div>
+    </header>
+    <div class="comparison-grid">
+      @for (card of chartCards(); track card.key) {
+        <article class="comparison-card" [attr.data-metric]="card.key" [attr.aria-busy]="card.loading" [attr.aria-labelledby]="'chart-title-' + card.key">
+          <header><span class="comparison-icon"><mat-icon aria-hidden="true">{{ card.icon }}</mat-icon></span><h3 [id]="'chart-title-' + card.key">{{ card.title }}</h3>@if (card.currency) { <span class="currency-badge" dir="ltr">{{ card.currency }}</span> }</header>
+          @if (card.loading) {
+            <p class="chart-state" role="status">جارٍ تحميل {{ card.title }}…</p>
+          } @else if (card.error) {
+            <div class="chart-state chart-error" role="alert"><mat-icon aria-hidden="true">cloud_off</mat-icon><p>تعذّر تحميل {{ card.title }}.</p><button type="button" (click)="loadMetric(card.key)">إعادة المحاولة</button></div>
+          } @else {
+            @if (!card.ready) {
+              <div class="chart-state"><mat-icon aria-hidden="true">insert_chart_outlined</mat-icon><p>بيانات المقارنة غير مكتملة.</p><small>{{ card.currency ? 'إحدى قيمتي الفترتين غير متاحة في التقرير.' : 'العملة غير محددة في التقرير.' }}</small></div>
+            } @else if (card.zero) {
+              <div class="chart-state"><mat-icon aria-hidden="true">bar_chart</mat-icon><p>القيمتان تساويان صفرًا.</p><small>لا توجد قيم غير صفرية لعرضها في الرسم.</small></div>
+            } @else {
+              <div class="comparison-canvas"><canvas baseChart [type]="chartType()" [data]="card.data" [options]="comparisonOptions()" role="img" [attr.aria-label]="card.title + ': الفترة السابقة ' + card.previous + '، الفترة الحالية ' + card.current + ' ' + card.currency">{{ card.title }}: الفترة السابقة {{ card.previous }}، الفترة الحالية {{ card.current }} {{ card.currency }}</canvas></div>
+            }
+            <dl class="comparison-values"><div><dt><i class="previous-dot" aria-hidden="true"></i>الفترة السابقة</dt><dd>{{ card.previous === null ? 'غير متاح' : (card.previous | number:'1.2-2') }}</dd></div><div><dt><i class="current-dot" aria-hidden="true"></i>الفترة الحالية</dt><dd>{{ card.current === null ? 'غير متاح' : (card.current | number:'1.2-2') }}</dd></div></dl>
+          }
+        </article>
+      }
+    </div>
+  </section>
+
+  @if (tableErrors().length) {
+    <div class="table-load-error" role="alert"><p>تعذّر تحميل تفاصيل: {{ tableErrors().join('، ') }}.</p><button type="button" (click)="loadTables()">إعادة تحميل التفاصيل</button></div>
+  }
 
   <!-- Tables Section using Angular Material Tabs -->
   <mat-tab-group animationDuration="0ms" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">

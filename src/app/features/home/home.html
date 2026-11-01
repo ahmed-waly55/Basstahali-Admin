@@ -10,7 +10,7 @@
     </button>
   </header>
 
-  <nav class="quick-actions grid grid-cols-2 xl:grid-cols-4 gap-3.5" aria-label="المهام اليومية">
+  <nav class="quick-actions grid grid-cols-1 sm:grid-cols-3 gap-3.5" aria-label="المهام اليومية">
     @for (action of quickActions; track action.route) {
       <a [routerLink]="action.route" class="quick-action">
         <span class="action-icon"><mat-icon aria-hidden="true">{{ action.icon }}</mat-icon></span>
@@ -34,6 +34,18 @@
     }
   </section>
 
+  <section class="panel users-chart-panel" aria-labelledby="users-chart-heading" [attr.aria-busy]="isLoadingUsers">
+    <div class="section-heading flex items-center justify-between gap-4"><div><h2 id="users-chart-heading">الحسابات النشطة</h2><p class="muted">مقارنة أعداد الطلاب والمعلمين حسب آخر إحصاءات النظام.</p></div><span class="chart-unit">عدد الحسابات</span></div>
+    @if (isLoadingUsers) {
+      <div class="state-message" role="status">جارٍ تحميل إحصاءات الحسابات…</div>
+    } @else if (usersError) {
+      <div class="state-message error-state" role="alert"><span>تعذّر تحميل رسم الحسابات النشطة.</span><button type="button" (click)="getUsers()">إعادة المحاولة</button></div>
+    } @else if (userChartRows.length) {
+      <div class="users-chart-layout"><div class="users-chart-canvas"><canvas baseChart [data]="userChartData" [options]="userChartOptions" type="bar" role="img" aria-label="أعداد الطلاب والمعلمين النشطين، القيم النصية بجوار الرسم"></canvas></div><dl class="user-chart-values">@for (item of userChartRows; track item.label) { <div><dt>{{ item.label }}</dt><dd>{{ item.count | number }}</dd></div> }</dl></div>
+      @if (userChartRows.length < 2) { <p class="muted">بعض أعداد الحسابات غير متاحة في الإحصاءات الحالية.</p> }
+    } @else { <div class="state-message">أعداد الطلاب والمعلمين غير متاحة حاليًا.</div> }
+  </section>
+
   <div class="overview-grid">
     <section class="panel financial-panel" aria-labelledby="finance-heading">
       <div class="section-heading flex items-center justify-between gap-4 mb-4"><h2 id="finance-heading">المتابعة المالية</h2><a routerLink="/analytics">التقارير المالية <span aria-hidden="true">←</span></a></div>
@@ -53,19 +65,21 @@
           <small class="muted">بحسب تقرير تحليل التكاليف</small>
         </div>
       </div>
-      <div class="chart-heading"><h3 class="text-xs font-bold">الإيرادات والمصروفات الشهرية</h3>
+      <div class="chart-heading"><div><h3 class="text-xs font-bold">الإيرادات والمصروفات الشهرية</h3>
         @if (revenueExpenses && !chartError && !isLoadingChart) {
           <span class="text-[10px] text-[var(--admin-muted)]">{{ revenueExpenses.from | date:'dd/MM/yyyy' }} — {{ revenueExpenses.to | date:'dd/MM/yyyy' }} <span dir="ltr">({{ revenueExpenses.currency }})</span></span>
         }
-      </div>
+      </div><div class="chart-type-toggle" role="group" aria-label="طريقة عرض الإحصائيات الشهرية"><button type="button" [attr.aria-pressed]="monthlyChartType === 'bar'" (click)="setMonthlyChartType('bar')"><mat-icon aria-hidden="true">bar_chart</mat-icon>أعمدة</button><button type="button" [attr.aria-pressed]="monthlyChartType === 'line'" (click)="setMonthlyChartType('line')"><mat-icon aria-hidden="true">show_chart</mat-icon>خطّي</button></div></div>
       <div class="chart-container" [attr.aria-busy]="isLoadingChart">
         @if (isLoadingChart) {
           <div class="state-message" role="status"><mat-icon aria-hidden="true">bar_chart</mat-icon><span>جارٍ تحميل البيانات المالية…</span></div>
         } @else if (chartError) {
           <div class="state-message error-state" role="alert"><mat-icon aria-hidden="true">cloud_off</mat-icon><span>تعذّر تحميل الرسم البياني.</span><button type="button" (click)="getRevenueExpenses()">إعادة المحاولة</button></div>
+        } @else if (monthlyChartMessage) {
+          <div class="state-message" role="status">{{ monthlyChartMessage }}</div>
         } @else if (barChartData.labels?.length) {
-          <div class="chart-canvas"><canvas baseChart [data]="barChartData" [options]="barChartOptions" type="bar" role="img" aria-label="مقارنة الإيرادات والمصروفات الشهرية"></canvas></div>
-          <details class="chart-details text-[11px] mt-2.5 text-[var(--admin-primary)]"><summary>عرض البيانات كجدول</summary><div class="overflow-x-auto"><table><caption class="sr-only">الإيرادات والمصروفات حسب الشهر، {{ revenueExpenses?.currency }}</caption><thead><tr><th scope="col">الشهر</th><th scope="col">الإيرادات</th><th scope="col">المصروفات</th></tr></thead><tbody>@for (month of revenueExpenses?.months; track $index) { <tr><th scope="row">{{ month.monthName }}</th><td>{{ month.revenue | number:'1.2-2' }} {{ month.currency }}</td><td>{{ month.expenses | number:'1.2-2' }} {{ month.currency }}</td></tr> }</tbody></table></div></details>
+          <div class="chart-canvas">@if (monthlyChartType === 'bar') { <canvas baseChart [data]="barChartData" [options]="barChartOptions" type="bar" role="img" aria-label="مقارنة الإيرادات والمصروفات الشهرية بالأعمدة، البيانات متاحة في الجدول"></canvas> } @else { <canvas baseChart [data]="lineChartData" [options]="lineChartOptions" type="line" role="img" aria-label="اتجاه الإيرادات والمصروفات الشهرية، البيانات متاحة في الجدول"></canvas> }</div>
+          <details class="chart-details text-[11px] mt-2.5 text-[var(--admin-primary)]"><summary>عرض البيانات كجدول</summary><div class="overflow-x-auto"><table><caption class="sr-only">الإيرادات والمصروفات حسب الشهر، {{ revenueExpenses?.currency }}</caption><thead><tr><th scope="col">الشهر</th><th scope="col">الإيرادات</th><th scope="col">المصروفات</th></tr></thead><tbody>@for (month of monthlyRows; track $index) { <tr><th scope="row">{{ month.monthName }}</th><td>{{ month.revenue | number:'1.2-2' }} {{ month.currency }}</td><td>{{ month.expenses | number:'1.2-2' }} {{ month.currency }}</td></tr> }</tbody></table></div></details>
         } @else {
           <div class="state-message"><mat-icon aria-hidden="true">bar_chart</mat-icon><span>لا توجد بيانات شهرية للفترة المعروضة.</span></div>
         }

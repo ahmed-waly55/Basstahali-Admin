@@ -26,7 +26,8 @@ export const routes: Routes = [
       {path:"audit-logs", loadComponent:()=> import ("./features/audit/audit").then( m => m.Audit), title:"سجل المستخدمين"},
       {path:"teacher-forms", loadComponent:()=> import("./features/teacher-forms/teacher-forms").then(m => m.TeacherForms), title:"طلبات المدرسين"}
       ,{path:"admin-operations", loadComponent:()=> import("./features/admin-operations/admin-operations").then(m => m.AdminOperations), title:"بسطهالي | عمليات الإدارة"}
-      ,{path:"student-schedules", loadComponent:()=> import("./features/student-schedules/student-schedules").then(m => m.StudentSchedules), title:"بسطهالي | جداول الطلاب"}
+      ,{path:"schedule", redirectTo:"home", pathMatch:"full"}
+      ,{path:"student-schedules", redirectTo:"home", pathMatch:"full"}
       ,{path:"student-finance", loadComponent:()=> import("./features/student-finance/student-finance").then(m => m.StudentFinance), title:"بسطهالي | مالية الطلاب"}
       ,{path:"finance-management", loadComponent:()=> import("./features/finance-management/finance-management").then(m => m.FinanceManagement), title:"بسطهالي | الإدارة المالية"}
     ]
